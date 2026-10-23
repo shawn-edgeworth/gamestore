@@ -4,6 +4,7 @@ using GameStore.Api.Data;
 using GameStore.Api.Mappers;
 using GameStore.Api.Models;
 using GameStore.Api.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,10 @@ builder.Services.AddScoped<GameRepository>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<CategoryRepository>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<UserService>();
+
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateGameRequest>();
 
@@ -193,6 +198,25 @@ app.MapPut("/categories/{id}", async (CategoryService categoryService, int id, U
     }
 
     return Results.NoContent();
+});
+
+app.MapPost("/register", async (UserService userService, UserRegisterRequest request) =>
+{
+    var result = await userService.Register(request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    if (result.Value is null)
+    {
+        return ToHttpError(OperationErrorType.NotFound, "Can't register this user");
+    }
+
+    var user = result.Value;
+
+    return Results.Created($"/users/{user.Id}", user.ToDetailsResponse());
 });
 
 app.Run();

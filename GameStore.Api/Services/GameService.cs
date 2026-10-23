@@ -8,7 +8,7 @@ public enum OperationErrorType
 {
     None,
     Validation,
-    NotFound
+    NotFound,
 }
 
 public class GameService
