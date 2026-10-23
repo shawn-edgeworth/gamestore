@@ -22,7 +22,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateGameRequest>();
 
 builder.Services.AddDbContext<GameDbContext>(options =>
       options.UseNpgsql(builder.Configuration.GetConnectionString("GameStore")));
-//  options.UseNpgsql(builder.Configuration.GetConnectionString("GameStore_Test")));
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -38,9 +37,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/games", async (GameService gameService) =>
+app.MapGet("/games", async (GameService gameService, [AsParameters] GameQuery gameQuery) =>
 {
-    var games = await gameService.GetAllGames();
+    var games = await gameService.GetAllGames(gameQuery);
     return Results.Ok(games.ToCollectionResponse());
 });
 
@@ -172,8 +171,29 @@ app.MapPost("/categories", async (CategoryService categoryService, CreateCategor
     return Results.Created($"/categories/{category.Id}", category.ToDetailsResponse());
 });
 
+app.MapDelete("/categories/{id}", async (CategoryService categoryService, int id) =>
+{
+    var result = await categoryService.DeleteCategory(id);
 
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
 
+    return Results.NoContent();
+});
+
+app.MapPut("/categories/{id}", async (CategoryService categoryService, int id, UpdateCategoryRequest request) =>
+{
+    var result = await categoryService.UpdateCategory(id, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.NoContent();
+});
 
 app.Run();
 

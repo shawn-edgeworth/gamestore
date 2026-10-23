@@ -12,11 +12,41 @@ public class GameRepository
         _dbContext = dbContext;
     }
 
-    public async Task<List<Game>> GetAllGames()
+    public async Task<List<Game>> GetAllGames(GameQuery gameQuery)
     {
-        return await _dbContext.Games
-        .Include(x => x.Category)
-        .ToListAsync();
+        IQueryable<Game> query = _dbContext.Games
+        .Include(x => x.Category);
+
+        if (gameQuery.CategoryId is not null)
+        {
+            query = query.Where(x => x.CategoryId == gameQuery.CategoryId);
+        }
+
+        if (gameQuery.MinPrice is not null)
+        {
+            query = query.Where(x => x.Price >= gameQuery.MinPrice);
+        }
+
+        if (gameQuery.MaxPrice is not null)
+        {
+            query = query.Where(x => x.Price <= gameQuery.MaxPrice);
+        }
+
+        if (gameQuery.Search is not null)
+        {
+            query = query.Where(x => EF.Functions.ILike(x.Name, $"%{gameQuery.Search}%"));
+        }
+
+        if (gameQuery.Page is >= 1 && gameQuery.PageSize >= 1)
+        {
+            var maxPageSize = Math.Min(gameQuery.PageSize.Value, 50);
+            query = query
+                    .OrderBy(x => x.Id)
+                    .Skip((gameQuery.Page.Value - 1) * maxPageSize)
+                    .Take(maxPageSize);
+        }
+
+        return await query.ToListAsync();
     }
 
     public async Task<Game?> GetGameById(int id)

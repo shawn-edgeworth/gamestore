@@ -11,9 +11,6 @@ namespace GameStore.Api.Tests;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private readonly string _databaseName =
-        $"GameStoreTests-{Guid.NewGuid()}";
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -24,7 +21,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<GameDbContext>>();
 
             services.AddDbContext<GameDbContext>(options =>
-                options.UseInMemoryDatabase(_databaseName));
+                options.UseInMemoryDatabase($"GameStoreTests-{Guid.NewGuid()}"));
         });
     }
 }

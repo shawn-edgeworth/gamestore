@@ -1,30 +1,84 @@
 using System.Net;
 using System.Net.Http.Json;
-using GameStore.Api.Data;
 using GameStore.Api.Models;
 
 namespace GameStore.Api.Tests;
 
-public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
+public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
+    private readonly Random _random = new Random((int)DateTime.UtcNow.Ticks);
 
-    public GameApiTests(CustomWebApplicationFactory factory)
+    public GameTests(CustomWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
+    }
+
+    public async Task InitializeAsync()
+    {
+        await Seed();
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task Seed()
+    {
+        var gameGenres = new Task[]
+        {
+            PostCategory("Platformer"),
+            PostCategory("Adventure"),
+            PostCategory("RPG"),
+        };
+
+        await Task.WhenAll(gameGenres);
+
+        var games = new Task[]
+        {
+            PostGame("Crash Bandicoot",9.99m,categoryId:1),
+            PostGame("Sonic the Hedgehog",4.99m,categoryId:2),
+            PostGame("Arknights Endfield",15.99m,categoryId:3),
+        };
+
+        await Task.WhenAll(games);
+    }
+
+    private Task<HttpResponseMessage> PostCategory(string name)
+    {
+        var createRequest = new CreateCategoryRequest
+        {
+            Name = name
+        };
+
+        return _client.PostAsJsonAsync("/categories", createRequest);
+    }
+
+    private Task<HttpResponseMessage> PostGame(string name, decimal price,
+        string? description = null,
+        string? imageUrl = null,
+        DateOnly? date = null,
+        int? categoryId = null)
+    {
+        var request = new CreateGameRequest
+        {
+            Name = name,
+            Price = price,
+            Description = description is null ? $"{name}'s description" : description,
+            ImageUrl = imageUrl is null ? $@"\images\{name}.png" : imageUrl,
+            ReleaseDate = date is null ? new DateOnly(_random.Next(2000, 2022), _random.Next(1, 12), _random.Next(1, 31)) : date,
+            CategoryId = categoryId is null ? _random.Next(1, 3) : categoryId.Value
+        };
+
+        return _client.PostAsJsonAsync("/games", request);
     }
 
     [Fact]
     public async Task PostGame_ValidRequest_ReturnsCreated()
     {
-        var request = new CreateGameRequest
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var response = await _client.PostAsJsonAsync(
-            "/games", request);
+        var response = await PostGame("Mario Party", 25.99m, "New Game About Mario Adventures from Nintendo!",
+        @"\images\marioParty.png", new DateOnly(2026, 5, 15), 1);
 
         Assert.Equal(
             HttpStatusCode.Created,
@@ -34,8 +88,12 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
             .ReadFromJsonAsync<Game>();
 
         Assert.NotNull(game);
-        Assert.Equal("Test Game", game.Name);
-        Assert.Equal(19.99m, game.Price);
+        Assert.Equal("Mario Party", game.Name);
+        Assert.Equal(25.99m, game.Price);
+        Assert.Equal("New Game About Mario Adventures from Nintendo!", game.Description);
+        Assert.Equal(@"\images\marioParty.png", game.ImageUrl);
+        Assert.Equal(new DateOnly(2026, 5, 15), game.ReleaseDate);
+        Assert.Equal(1, game.CategoryId);
 
         var getResponse = await _client.GetAsync(
             $"/games/{game.Id}");
@@ -49,7 +107,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetGame_NonExistingId_ReturnsNotFound()
     {
         var response = await _client.GetAsync(
-            "/games/999999");
+            $"/games/{int.MinValue}");
 
         Assert.Equal(
             HttpStatusCode.NotFound,
@@ -59,14 +117,8 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostGame_NegativePrice_ReturnsBadRequest()
     {
-        var request = new CreateGameRequest
-        {
-            Name = "Test Game",
-            Price = -10m
-        };
-
-        var response = await _client.PostAsJsonAsync(
-            "/games", request);
+        var response = await PostGame("Mario Party", -100m, "New Game About Mario Adventures from Nintendo!",
+        @"\images\marioParty.png", new DateOnly(2026, 5, 15), 1);
 
         Assert.Equal(
             HttpStatusCode.BadRequest,
@@ -76,29 +128,15 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task DeleteGame_ExistingId_ReturnNoContent()
     {
-        var request = new CreateGameRequest
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", request);
-
-        var game = await postResponse.Content
-            .ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(game);
-
         var deleteResponse = await _client.DeleteAsync(
-            $"/games/{game.Id}");
+            $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.NoContent,
             deleteResponse.StatusCode);
 
         var getResponse = await _client.GetAsync(
-            $"/games/{game.Id}");
+            $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.NotFound,
@@ -109,33 +147,18 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PutGame_ReturnNoContent_ActualyUpdateGame()
     {
-        var createRequest = new CreateGameRequest()
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", createRequest
-        );
-
-        Assert.Equal(
-           HttpStatusCode.Created,
-           postResponse.StatusCode
-       );
-
-        var newGame = await postResponse.Content.ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(newGame);
-
         var updateGameRequest = new UpdateGameRequest()
         {
-            Name = "New Test Game",
-            Price = 29.99m
+            Name = "Crash Bandicoot Bundle",
+            Price = 29.99m,
+            Description = "Crash Bandicoot contains now two games in one!",
+            ImageUrl = @"\images\crashBandicootBundle.png",
+            ReleaseDate = new DateOnly(2026, 1, 28),
+            CategoryId = 2
         };
 
         var putResponse = await _client.PutAsJsonAsync(
-            $"/games/{newGame.Id}", updateGameRequest);
+            $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
             HttpStatusCode.NoContent,
@@ -143,7 +166,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
         );
 
         var getResponse = await _client.GetAsync(
-            $"/games/{newGame.Id}");
+            $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -153,8 +176,12 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
         var updatedGame = await getResponse.Content.ReadFromJsonAsync<Game>();
 
         Assert.NotNull(updatedGame);
-        Assert.Equal("New Test Game", updatedGame.Name);
+        Assert.Equal("Crash Bandicoot Bundle", updatedGame.Name);
         Assert.Equal(29.99m, updatedGame.Price);
+        Assert.Equal("Crash Bandicoot contains now two games in one!", updatedGame.Description);
+        Assert.Equal(@"\images\crashBandicootBundle.png", updatedGame.ImageUrl);
+        Assert.Equal(new DateOnly(2026, 1, 28), updatedGame.ReleaseDate);
+        Assert.Equal(2, updatedGame.CategoryId);
     }
 
     [Fact]
@@ -162,12 +189,16 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     {
         var updateGameRequest = new UpdateGameRequest()
         {
-            Name = "New Test Game",
-            Price = 29.99m
+            Name = "Crash Bandicoot Bundle",
+            Price = 29.99m,
+            Description = "Crash Bandicoot contains now two games in one!",
+            ImageUrl = @"\images\crashBandicootBundle.png",
+            ReleaseDate = new DateOnly(2026, 1, 28),
+            CategoryId = 2
         };
 
         var putResponse = await _client.PutAsJsonAsync(
-            $"/games/99999999", updateGameRequest);
+            $"/games/{int.MinValue}", updateGameRequest);
 
         Assert.Equal(
             HttpStatusCode.NotFound,
@@ -178,32 +209,13 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PatchGame_UpdatePrice_KeepName()
     {
-        var createRequest = new CreateGameRequest()
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", createRequest
-        );
-
-        Assert.Equal(
-           HttpStatusCode.Created,
-           postResponse.StatusCode
-       );
-
-        var newGame = await postResponse.Content.ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(newGame);
-
         var updateGamePriceRequest = new UpdateGamePriceRequest()
         {
             Price = 99.99m
         };
 
         var patchResponse = await _client.PatchAsJsonAsync(
-            $"/games/{newGame.Id}/price", updateGamePriceRequest);
+            $"/games/{1}/price", updateGamePriceRequest);
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -211,7 +223,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
             );
 
         var getResponse = await _client.GetAsync(
-        $"/games/{newGame.Id}");
+        $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -223,38 +235,19 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(updatedGame);
 
         Assert.Equal(99.99m, updatedGame.Price);
-        Assert.Equal("Test Game", updatedGame.Name);
+        Assert.Equal("Crash Bandicoot", updatedGame.Name);
     }
 
     [Fact]
     public async Task PatchGame_NegativePrice_ReturnBadRequest()
     {
-        var createRequest = new CreateGameRequest()
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", createRequest
-        );
-
-        Assert.Equal(
-           HttpStatusCode.Created,
-           postResponse.StatusCode
-       );
-
-        var newGame = await postResponse.Content.ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(newGame);
-
         var updateGamePriceRequest = new UpdateGamePriceRequest()
         {
-            Price = -1m
+            Price = -100m
         };
 
         var patchResponse = await _client.PatchAsJsonAsync(
-            $"/games/{newGame.Id}/price", updateGamePriceRequest);
+            $"/games/{1}/price", updateGamePriceRequest);
 
         Assert.Equal(
             HttpStatusCode.BadRequest,
@@ -262,7 +255,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
             );
 
         var getResponse = await _client.GetAsync(
-        $"/games/{newGame.Id}");
+        $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -278,33 +271,18 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PutGame_NegativePrice_ReturnBadRequest()
     {
-        var createRequest = new CreateGameRequest()
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", createRequest
-        );
-
-        Assert.Equal(
-           HttpStatusCode.Created,
-           postResponse.StatusCode
-       );
-
-        var newGame = await postResponse.Content.ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(newGame);
-
         var updateGameRequest = new UpdateGameRequest()
         {
-            Name = "New Test Game",
-            Price = -1m
+            Name = "Crash Bandicoot Bundle",
+            Price = -100m,
+            Description = "Crash Bandicoot contains now two games in one!",
+            ImageUrl = @"\images\crashBandicootBundle.png",
+            ReleaseDate = new DateOnly(2026, 1, 28),
+            CategoryId = 2
         };
 
         var putResponse = await _client.PutAsJsonAsync(
-            $"/games/{newGame.Id}", updateGameRequest);
+            $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
             HttpStatusCode.BadRequest,
@@ -312,7 +290,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
             );
 
         var getResponse = await _client.GetAsync(
-        $"/games/{newGame.Id}");
+        $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -322,40 +300,27 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
         var updatedGame = await getResponse.Content.ReadFromJsonAsync<Game>();
 
         Assert.NotNull(updatedGame);
-        Assert.Equal("Test Game", updatedGame.Name);
-        Assert.Equal(19.99m, updatedGame.Price);
+        Assert.Equal("Crash Bandicoot", updatedGame.Name);
+        Assert.Equal(9.99m, updatedGame.Price);
+        Assert.Equal(1, updatedGame.CategoryId);
     }
 
     [Fact]
     public async Task PutGame_EmptyName_ReturnBadRequest()
     {
-        var createRequest = new CreateGameRequest()
-        {
-            Name = "Test Game",
-            Price = 19.99m
-        };
-
-        var postResponse = await _client.PostAsJsonAsync(
-            "/games", createRequest
-        );
-
-        Assert.Equal(
-           HttpStatusCode.Created,
-           postResponse.StatusCode
-       );
-
-        var newGame = await postResponse.Content.ReadFromJsonAsync<Game>();
-
-        Assert.NotNull(newGame);
-
         var updateGameRequest = new UpdateGameRequest()
         {
             Name = string.Empty,
-            Price = 49.99m
+            Price = -100m,
+            Description = "Crash Bandicoot contains now two games in one!",
+            ImageUrl = @"\images\crashBandicootBundle.png",
+            ReleaseDate = new DateOnly(2026, 1, 28),
+            CategoryId = 2
         };
 
+
         var putResponse = await _client.PutAsJsonAsync(
-            $"/games/{newGame.Id}", updateGameRequest);
+            $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
             HttpStatusCode.BadRequest,
@@ -363,7 +328,7 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
             );
 
         var getResponse = await _client.GetAsync(
-        $"/games/{newGame.Id}");
+        $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -373,8 +338,9 @@ public class GameApiTests : IClassFixture<CustomWebApplicationFactory>
         var updatedGame = await getResponse.Content.ReadFromJsonAsync<Game>();
 
         Assert.NotNull(updatedGame);
-        Assert.Equal("Test Game", updatedGame.Name);
-        Assert.Equal(19.99m, updatedGame.Price);
+        Assert.Equal("Crash Bandicoot", updatedGame.Name);
+        Assert.Equal(9.99m, updatedGame.Price);
+        Assert.Equal(1, updatedGame.CategoryId);
     }
 
     [Fact]

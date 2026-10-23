@@ -105,10 +105,10 @@
 - [x] При чтении игр нет `Include(Category)` → `CategoryName` часто null
 - [x] При создании/обновлении игры нет явной проверки существования `CategoryId`
 - [ ] Category: нет update/delete
-- [ ] FluentValidation в пакетах, но не используется
+- [x] FluentValidation в пакетах, но не используется
 - [ ] `GameStore.Api.http` — устаревший weatherforecast
-- [ ] Нет `.gitignore`, пароль БД в `appsettings.json`
-- [ ] Нет ни одного git-коммита
+- [x] Нет `.gitignore`, пароль БД в `appsettings.json`
+- [x] Нет ни одного git-коммита
 - [ ] Нет тестов на Categories
 - [ ] Integration-тесты, похоже, устарели относительно DTO
 

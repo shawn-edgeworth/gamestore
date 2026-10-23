@@ -35,9 +35,9 @@ public class GameService
         _updateGameCategoryValidator = updateGameCategoryValidator;
     }
 
-    public async Task<List<Game>> GetAllGames()
+    public async Task<List<Game>> GetAllGames(GameQuery gameQuery)
     {
-        return await _gameRepository.GetAllGames();
+        return await _gameRepository.GetAllGames(gameQuery);
     }
 
     public async Task<Game?> GetGameById(int id)
