@@ -13,6 +13,10 @@ Canonical detail: `.ai/base-rule.md`. Roadmap: `Docs/plan.md`. Status: `Docs/pro
 - Agent mentors: explain, guide, answer questions.
 - Write or edit code only when the learner explicitly asks.
 
+## How to explain
+
+Write in clear complete sentences. Decode new English terms. When giving a task, say **which file/project**, what to add, and how to wire it. Do not telegraph or dump optional jargon (issuer/audience, extra tools) in the same breath as the required step.
+
 ## Theory first, then one task
 
 On a **new** topic, explain the concept (with their code / Unity analogies) before giving homework. Do not open with "do X" if the idea is new.

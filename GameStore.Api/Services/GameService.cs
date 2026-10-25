@@ -9,6 +9,7 @@ public enum OperationErrorType
     None,
     Validation,
     NotFound,
+    Authorization
 }
 
 public class GameService

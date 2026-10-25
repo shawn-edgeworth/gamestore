@@ -15,6 +15,11 @@ public class UserRepository
         return await _dbContext.Users.AnyAsync(x => x.Email == email);
     }
 
+    public async Task<User?> GetUser(string email)
+    {
+        return await _dbContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+    }
+
     public async Task<User> CreateUser(User user)
     {
         _dbContext.Users.Add(user);

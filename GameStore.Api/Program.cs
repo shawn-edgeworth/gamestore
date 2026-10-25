@@ -1,18 +1,65 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using GameStore.Api.Data;
 using GameStore.Api.Mappers;
 using GameStore.Api.Models;
 using GameStore.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+                   Encoding.UTF8.GetBytes(jwtKey)),
+        ValidateIssuer = true,
+        ValidIssuer = "GameStore",
+        ValidateAudience = true,
+        ValidAudience = "GameStore.Api",
+        ValidateLifetime = true
+    };
+});
+
+builder.Services.AddSwaggerGen(options =>
+{
+    // ...
+
+    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    });
+});
+
+builder.Services.AddAuthorization();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
 });
+
+builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddScoped<GameRepository>();
 builder.Services.AddScoped<GameService>();
@@ -33,14 +80,16 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/openapi/v1.json", "GameStore API");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "GameStore API");
     });
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/games", async (GameService gameService, [AsParameters] GameQuery gameQuery) =>
 {
@@ -77,7 +126,7 @@ app.MapPost("/games", async (GameService gameService, CreateGameRequest request)
     var game = result.Value;
 
     return Results.Created($"/games/{game.Id}", game.ToDetailsResponse());
-});
+}).RequireAuthorization(policy=> policy.RequireRole("Admin"));
 
 app.MapDelete("/games/{id}", async (GameService gameService, int id) =>
 {
@@ -219,6 +268,25 @@ app.MapPost("/register", async (UserService userService, UserRegisterRequest req
     return Results.Created($"/users/{user.Id}", user.ToDetailsResponse());
 });
 
+app.MapPost("/login", async (UserService userService, UserLoginRequest request) =>
+{
+    var result = await userService.Login(request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    if (result.Value is null)
+    {
+        return ToHttpError(OperationErrorType.NotFound, "User is not found.");
+    }
+
+    var loginResponse = result.Value;
+
+    return Results.Ok(loginResponse);
+});
+
 app.Run();
 
 static IResult ToHttpError(OperationErrorType errorType, string? error)
@@ -227,6 +295,7 @@ static IResult ToHttpError(OperationErrorType errorType, string? error)
     {
         OperationErrorType.Validation => Results.BadRequest(error),
         OperationErrorType.NotFound => Results.NotFound(error),
+        OperationErrorType.Authorization => Results.Unauthorized(),
         _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
     };
 }
