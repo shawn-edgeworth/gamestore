@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using GameStore.Api.Data;
 using GameStore.Api.Mappers;
 using GameStore.Api.Models;
+using GameStore.Api.Models.Orders;
 using GameStore.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -68,6 +70,9 @@ builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<UserService>();
 
+builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<OrderService>();
+
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateGameRequest>();
@@ -126,7 +131,7 @@ app.MapPost("/games", async (GameService gameService, CreateGameRequest request)
     var game = result.Value;
 
     return Results.Created($"/games/{game.Id}", game.ToDetailsResponse());
-}).RequireAuthorization(policy=> policy.RequireRole("Admin"));
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapDelete("/games/{id}", async (GameService gameService, int id) =>
 {
@@ -286,6 +291,28 @@ app.MapPost("/login", async (UserService userService, UserLoginRequest request) 
 
     return Results.Ok(loginResponse);
 });
+
+app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, CreateOrderRequest request) =>
+{
+    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await orderService.CreateOrder(userId, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    if (result.Value is null)
+    {
+        return ToHttpError(OperationErrorType.NotFound, "Can not create order.");
+    }
+
+    return Results.Created($"/orders/{result.Value.Id}",result.Value.ToResponse());
+}).RequireAuthorization();
 
 app.Run();
 
