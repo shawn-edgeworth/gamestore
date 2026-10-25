@@ -1,5 +1,5 @@
 using FluentValidation;
-using GameStore.Api.Models.Orders;
+using GameStore.Api.Models;
 
 namespace GameStore.Api.Validation;
 

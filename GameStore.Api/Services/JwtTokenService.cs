@@ -1,7 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using GameStore.Api.Models;
 using Microsoft.IdentityModel.Tokens;
+
+namespace GameStore.Api.Services;
 
 public class JwtTokenService
 {

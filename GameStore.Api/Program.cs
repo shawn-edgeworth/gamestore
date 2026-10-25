@@ -5,7 +5,6 @@ using FluentValidation;
 using GameStore.Api.Data;
 using GameStore.Api.Mappers;
 using GameStore.Api.Models;
-using GameStore.Api.Models.Orders;
 using GameStore.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;

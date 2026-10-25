@@ -1,5 +1,7 @@
-using GameStore.Api.Data;
+using GameStore.Api.Models;
 using Microsoft.EntityFrameworkCore;
+
+namespace GameStore.Api.Data;
 
 public class UserRepository
 {

@@ -1,7 +1,9 @@
 using FluentValidation;
+using GameStore.Api.Data;
 using GameStore.Api.Models;
-using GameStore.Api.Services;
 using Microsoft.AspNetCore.Identity;
+
+namespace GameStore.Api.Services;
 
 public class UserService
 {

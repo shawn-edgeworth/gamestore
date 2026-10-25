@@ -89,6 +89,8 @@ namespace GameStore.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Orders");
                 });
 
@@ -114,12 +116,14 @@ namespace GameStore.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GameId");
+
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItem");
                 });
 
-            modelBuilder.Entity("User", b =>
+            modelBuilder.Entity("GameStore.Api.Models.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -149,19 +153,38 @@ namespace GameStore.Api.Migrations
                     b.HasOne("GameStore.Api.Models.Category", "Category")
                         .WithMany("Games")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("GameStore.Api.Models.Order", b =>
+                {
+                    b.HasOne("GameStore.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GameStore.Api.Models.OrderItem", b =>
                 {
+                    b.HasOne("GameStore.Api.Models.Game", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GameStore.Api.Models.Order", null)
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("GameStore.Api.Models.Category", b =>

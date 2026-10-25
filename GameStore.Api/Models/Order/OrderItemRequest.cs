@@ -1,8 +1,7 @@
-namespace GameStore.Api.Models.Orders
+namespace GameStore.Api.Models;
+
+public class OrderItemRequest
 {
-    public class OrderItemRequest
-    {
-        public int GameId { get; set; }
-        public int Quantity { get; set; }
-    }
+    public int GameId { get; set; }
+    public int Quantity { get; set; }
 }

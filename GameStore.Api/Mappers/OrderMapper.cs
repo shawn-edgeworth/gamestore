@@ -1,5 +1,7 @@
 using GameStore.Api.Models;
 
+namespace GameStore.Api.Mappers;
+
 public static class OrderMapper
 {
     public static CreateOrderResponse ToResponse(this Order order)

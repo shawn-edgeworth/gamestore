@@ -1,7 +1,6 @@
 using FluentValidation;
 using GameStore.Api.Data;
 using GameStore.Api.Models;
-using GameStore.Api.Models.Orders;
 
 namespace GameStore.Api.Services
 {

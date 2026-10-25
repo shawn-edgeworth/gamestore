@@ -1,8 +1,6 @@
-namespace GameStore.Api.Models.Orders
-{
+namespace GameStore.Api.Models;
 
-    public class CreateOrderRequest
-    {
-        public List<OrderItemRequest> OrderItems { get; set; } = [];
-    }
+public class CreateOrderRequest
+{
+    public List<OrderItemRequest> OrderItems { get; set; } = [];
 }
