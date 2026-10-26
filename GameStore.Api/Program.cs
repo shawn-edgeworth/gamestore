@@ -310,7 +310,29 @@ app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, C
         return ToHttpError(OperationErrorType.NotFound, "Can not create order.");
     }
 
-    return Results.Created($"/orders/{result.Value.Id}",result.Value.ToResponse());
+    return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
+}).RequireAuthorization();
+
+app.MapGet("/orders", async (OrderService orderService, ClaimsPrincipal user) =>
+{
+    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await orderService.GetOrders(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    if (result.Value is null)
+    {
+        return ToHttpError(OperationErrorType.NotFound, "Can not find any order.");
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
 }).RequireAuthorization();
 
 app.Run();

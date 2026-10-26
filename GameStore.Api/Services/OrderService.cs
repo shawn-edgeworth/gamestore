@@ -45,13 +45,20 @@ namespace GameStore.Api.Services
                 {
                     GameId = item.GameId,
                     Quantity = item.Quantity,
-                    UnitPrice = game.Price
+                    UnitPrice = game.Price,
+                    Game = game
                 });
             }
 
             var order = await orderRepository.CreateOrder(userId, orderItems);
 
             return OperationResult<Order>.Success(order);
+        }
+
+        public async Task<OperationResult<List<Order>>> GetOrders(int userId)
+        {
+            List<Order> orders = await orderRepository.GetOrders(userId);
+            return OperationResult<List<Order>>.Success(orders);
         }
     }
 }

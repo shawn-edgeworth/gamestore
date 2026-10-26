@@ -4,14 +4,6 @@ using GameStore.Api.Models;
 
 namespace GameStore.Api.Services;
 
-public enum OperationErrorType
-{
-    None,
-    Validation,
-    NotFound,
-    Authorization
-}
-
 public class GameService
 {
     private readonly GameRepository _gameRepository;

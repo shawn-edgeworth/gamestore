@@ -1,4 +1,5 @@
 using GameStore.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Api.Data
 {
@@ -24,6 +25,14 @@ namespace GameStore.Api.Data
             await dbContext.SaveChangesAsync();
 
             return order;
+        }
+
+        public async Task<List<Order>> GetOrders(int userId)
+        {
+            return await dbContext.Orders
+            .Include(x => x.Items)
+            .ThenInclude(x => x.Game)
+            .Where(x => x.UserId == userId).ToListAsync();
         }
     }
 }

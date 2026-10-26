@@ -40,6 +40,11 @@
 - На новой теме — подробнее, с аналогиями (в т.ч. Unity).
 - Не навязывать Controllers/MediatR/CQRS без запроса или явной боли.
 
+## Код в репозитории
+
+- **Один тип — один файл** (класс, record, enum, struct). Исключение: `Program.cs` с top-level statements.
+- Неймспейсы: модели `GameStore.Api.Models`, сервисы `GameStore.Api.Services`, данные `GameStore.Api.Data`, мапперы `GameStore.Api.Mappers`, валидаторы `GameStore.Api.Validation`. Папка может быть `Models/Order/`, неймспейс всё равно `Models`.
+
 ## Чего не делать
 
 - Не коммитить и не пушить без явной просьбы.

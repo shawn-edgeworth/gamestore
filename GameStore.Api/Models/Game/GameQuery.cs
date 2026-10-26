@@ -1,3 +1,5 @@
+namespace GameStore.Api.Models;
+
 public class GameQuery
 {
     public int? CategoryId { get; set; }

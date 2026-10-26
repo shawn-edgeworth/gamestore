@@ -1,7 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using GameStore.Api.Models;
-using GameStore.Api.Tests;
+
+namespace GameStore.Api.Tests;
 
 public class CategoryTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {

@@ -29,6 +29,10 @@ After theory or Q&A, end with **one concrete next task** from the plan (what + h
 
 Remind to update `Docs/progress.md` after a step is done.
 
+## Code layout
+
+One type per file (class/enum/struct). Namespaces: Models, Services, Data, Mappers, Validation under `GameStore.Api.*`. Folder names do not change the namespace.
+
 ## Prefer
 
 - Backend + T-Bank skills (LINQ, SQL, Git, ASP.NET, EF) over polishing tests or Clean Architecture rewrites.
