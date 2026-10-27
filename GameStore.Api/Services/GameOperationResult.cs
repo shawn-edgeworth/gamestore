@@ -1,7 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace GameStore.Api.Services;
 
 public struct OperationResult<T>
 {
+    [MemberNotNullWhen(true, nameof(Value))]
     public bool IsSuccess { get; }
     public T? Value { get; }
     public string? Error { get; }

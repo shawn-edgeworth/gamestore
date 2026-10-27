@@ -7,6 +7,11 @@ namespace GameStore.Api.Data
     {
         private readonly GameDbContext dbContext;
 
+        private IQueryable<Order> OrderWithItems =>
+            dbContext.Orders
+            .Include(x => x.Items)
+            .ThenInclude(x => x.Game);
+
         public OrderRepository(GameDbContext dbContext)
         {
             this.dbContext = dbContext;
@@ -29,10 +34,15 @@ namespace GameStore.Api.Data
 
         public async Task<List<Order>> GetOrders(int userId)
         {
-            return await dbContext.Orders
-            .Include(x => x.Items)
-            .ThenInclude(x => x.Game)
-            .Where(x => x.UserId == userId).ToListAsync();
+            return await OrderWithItems
+                .Where(x => x.UserId == userId).ToListAsync();
+        }
+
+        public async Task<Order?> GetOrder(int orderId)
+        {
+            var order = await OrderWithItems
+                .FirstOrDefaultAsync(x => x.Id == orderId);
+            return order;
         }
     }
 }

@@ -60,5 +60,21 @@ namespace GameStore.Api.Services
             List<Order> orders = await orderRepository.GetOrders(userId);
             return OperationResult<List<Order>>.Success(orders);
         }
+
+        public async Task<OperationResult<Order>> GetOrder(int orderId, int userId)
+        {
+            var order = await orderRepository.GetOrder(orderId);
+            if (order is null)
+            {
+                return OperationResult<Order>.Failure("Order is not found.", OperationErrorType.NotFound);
+            }
+
+            if (order.UserId != userId)
+            {
+                return OperationResult<Order>.Failure("No access to that order from this user.", OperationErrorType.NotFound);
+            }
+
+            return OperationResult<Order>.Success(order);
+        }
     }
 }

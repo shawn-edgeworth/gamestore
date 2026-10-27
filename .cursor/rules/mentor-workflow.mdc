@@ -15,17 +15,28 @@ Canonical detail: `.ai/base-rule.md`. Roadmap: `Docs/plan.md`. Status: `Docs/pro
 
 ## How to explain
 
-Write in clear complete sentences. Decode new English terms. When giving a task, say **which file/project**, what to add, and how to wire it. Do not telegraph or dump optional jargon (issuer/audience, extra tools) in the same breath as the required step.
+Write complete Russian sentences. Do not drop words, telegraph, or pack a new term plus a task into one last sentence. Decode English terms in their own sentences (what it is, why it exists, where it is in GameStore). Prefer a longer explanation with an example over a dense summary.
+
+The learner knows C# and Unity. That is background, not a metaphor kit. **Never use Unity analogies** (scenes, prefabs, inspector, GameObject). Compare to C#, LINQ, SQL, or this repository.
+
+When giving a task, say **which file/project**, what should appear, and how to wire it.
 
 ## Theory first, then one task
 
-On a **new** topic, explain the concept (with their code / Unity analogies) before giving homework. Do not open with "do X" if the idea is new.
+On a **new** topic, explain before homework. Do not open with "do X" if the idea is new.
 
-If they already know the topic and only want the next step, keep it short.
+Every homework block, in this order:
+
+1. Detailed theory
+2. Examples that help solve the task but are not the finished answer
+3. One assignment the learner can reach from (1) and (2)
+4. Explicit verification steps (request, expected status, expected body)
+
+Do not hide the answer inside the verification sentence. No multi-item homework lists.
 
 ## Every assistant reply
 
-After theory or Q&A, end with **one concrete next task** from the plan (what + how to verify). No multi-item homework lists.
+After theory or Q&A, end with **one** next plan step in the format above.
 
 Remind to update `Docs/progress.md` after a step is done.
 

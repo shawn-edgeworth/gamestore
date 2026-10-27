@@ -122,11 +122,6 @@ app.MapPost("/games", async (GameService gameService, CreateGameRequest request)
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "Game is not found.");
-    }
-
     var game = result.Value;
 
     return Results.Created($"/games/{game.Id}", game.ToDetailsResponse());
@@ -142,7 +137,7 @@ app.MapDelete("/games/{id}", async (GameService gameService, int id) =>
     }
 
     return Results.NoContent();
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPut("/games/{id}", async (GameService gameService, int id, UpdateGameRequest request) =>
 {
@@ -154,7 +149,7 @@ app.MapPut("/games/{id}", async (GameService gameService, int id, UpdateGameRequ
     }
 
     return Results.NoContent();
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPatch("/games/{id}/price", async (GameService gameService, int id, UpdateGamePriceRequest request) =>
 {
@@ -165,13 +160,8 @@ app.MapPatch("/games/{id}/price", async (GameService gameService, int id, Update
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "Game is not found.");
-    }
-
     return Results.Ok(result.Value.ToDetailsResponse());
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPatch("/games/{id}/category", async (GameService gameService, int id, UpdateGameCategoryRequest request) =>
 {
@@ -182,15 +172,8 @@ app.MapPatch("/games/{id}/category", async (GameService gameService, int id, Upd
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
-    {
-        return ToHttpError(
-            OperationErrorType.NotFound,
-            "Game is not found.");
-    }
-
     return Results.Ok(result.Value.ToDetailsResponse());
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapGet("/categories", async (CategoryService categoryService) =>
 {
@@ -219,15 +202,11 @@ app.MapPost("/categories", async (CategoryService categoryService, CreateCategor
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "Category is not found.");
-    }
 
     var category = result.Value;
 
     return Results.Created($"/categories/{category.Id}", category.ToDetailsResponse());
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapDelete("/categories/{id}", async (CategoryService categoryService, int id) =>
 {
@@ -239,7 +218,7 @@ app.MapDelete("/categories/{id}", async (CategoryService categoryService, int id
     }
 
     return Results.NoContent();
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPut("/categories/{id}", async (CategoryService categoryService, int id, UpdateCategoryRequest request) =>
 {
@@ -251,7 +230,7 @@ app.MapPut("/categories/{id}", async (CategoryService categoryService, int id, U
     }
 
     return Results.NoContent();
-});
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPost("/register", async (UserService userService, UserRegisterRequest request) =>
 {
@@ -260,11 +239,6 @@ app.MapPost("/register", async (UserService userService, UserRegisterRequest req
     if (!result.IsSuccess)
     {
         return ToHttpError(result.ErrorType, result.Error);
-    }
-
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "Can't register this user");
     }
 
     var user = result.Value;
@@ -279,11 +253,6 @@ app.MapPost("/login", async (UserService userService, UserLoginRequest request) 
     if (!result.IsSuccess)
     {
         return ToHttpError(result.ErrorType, result.Error);
-    }
-
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "User is not found.");
     }
 
     var loginResponse = result.Value;
@@ -305,10 +274,6 @@ app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, C
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
-    {
-        return ToHttpError(OperationErrorType.NotFound, "Can not create order.");
-    }
 
     return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
@@ -327,12 +292,24 @@ app.MapGet("/orders", async (OrderService orderService, ClaimsPrincipal user) =>
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-    if (result.Value is null)
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapGet("/orders/{id}", async (int id, OrderService orderService, ClaimsPrincipal user) =>
+{
+    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
     {
-        return ToHttpError(OperationErrorType.NotFound, "Can not find any order.");
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
 
-    return Results.Ok(result.Value.ToCollectionResponse());
+    var result = await orderService.GetOrder(id, userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToResponse());
 }).RequireAuthorization();
 
 app.Run();
