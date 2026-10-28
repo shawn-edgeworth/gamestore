@@ -1,7 +1,7 @@
 # GameStore — прогресс обучения
 
 > Живой файл. Обновляем после каждого учебного блока или заметного изменения в коде.
-> Последнее обновление: **2026-10-27**
+> Последнее обновление: **2026-10-28**
 
 ---
 
@@ -11,7 +11,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** backend ~80%, SQL ежедневно, простой фронт позже. Не уходить в React/TS. Тесты не углублять, пока SQL и портфолио-дыры не закрыты.
+**Фокус сейчас:** backend закрыт по MVP. Дальше алгоритмы и git-ветки; по желанию одна статическая страница из `wwwroot` (не React/MVC). Тесты не углублять. SQL поддерживать короткими запросами, не новым курсом.
 
 ---
 
@@ -22,10 +22,11 @@
 | Стек | .NET 10, Minimal APIs, EF Core + Npgsql, PostgreSQL, FluentValidation, JWT, xUnit |
 | Решение | `GameStore.Api` + `GameStore.Api.Tests` |
 | Сущности | `Game`, `Category`, `User`, `Order`, `OrderItem` |
-| Auth | регистрация, логин, JWT (HS256), роль `Admin` на `POST /games` |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404) |
-| Frontend / Docker / README | нет |
-| Git | репозиторий, `.gitignore`, коммиты, remote `origin` на `master` |
+| Auth | регистрация, логин, JWT (HS256). Запись игр и категорий — роль `Admin`. Заказы — любой JWT |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Один `SaveChanges` = одна транзакция |
+| README | есть (`README.md` в корне): запуск, user-secrets, миграции, сценарии Swagger |
+| Frontend / Docker | нет |
+| Git | репозиторий, `.gitignore`, коммиты, remote `origin` на `master`; ветки `feature/...` ещё слабо |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
 
 Эндпоинты (префикса `/api` нет):
@@ -35,17 +36,17 @@
 | GET | `/games` | нет | ✅ фильтры, поиск, пагинация |
 | GET | `/games/{id}` | нет | ✅ |
 | POST | `/games` | Admin | ✅ |
-| PUT | `/games/{id}` | нет | ✅ (роль ещё не повешена) |
-| DELETE | `/games/{id}` | нет | ✅ (роль ещё не повешена) |
-| PATCH | `/games/{id}/price` | нет | ✅ (роль ещё не повешена) |
-| PATCH | `/games/{id}/category` | нет | ✅ (роль ещё не повешена) |
+| PUT | `/games/{id}` | Admin | ✅ |
+| DELETE | `/games/{id}` | Admin | ✅ |
+| PATCH | `/games/{id}/price` | Admin | ✅ |
+| PATCH | `/games/{id}/category` | Admin | ✅ |
 | GET | `/categories` | нет | ✅ |
 | GET | `/categories/{id}` | нет | ✅ |
-| POST | `/categories` | нет | ✅ |
-| PUT | `/categories/{id}` | нет | ✅ |
-| DELETE | `/categories/{id}` | нет | ✅ Restrict, если есть игры |
+| POST | `/categories` | Admin | ✅ |
+| PUT | `/categories/{id}` | Admin | ✅ |
+| DELETE | `/categories/{id}` | Admin | ✅ Restrict, если есть игры |
 | POST | `/register` | нет | ✅ |
-| POST | `/login` | нет | ✅ JWT |
+| POST | `/login` | нет | ✅ JWT, поле `Token` |
 | POST | `/orders` | JWT | ✅ |
 | GET | `/orders` | JWT | ✅ свои заказы, `GameName` |
 | GET | `/orders/{id}` | JWT | ✅ свой → 200, чужой → 404, без токена → 401 |
@@ -62,16 +63,16 @@
 | Коллекции / LINQ | + | ✓ | фильтры игр, мапперы, `Where`/`Skip`/`Take`/`ILike` |
 | async/await | ~ | ✓ | сервисы, EF `*Async` |
 | DI / lifetimes | + | ✓ | `Program.cs`, Scoped сервисы и DbContext |
-| ASP.NET Core (pipeline, Minimal API) | + | ✓ | эндпоинты, JWT middleware, статусы, Swagger |
-| EF Core / миграции | + | ✓ | Include/ThenInclude, FK, Restrict/Cascade |
-| SQL | + | ~ / + | DBeaver: JOIN, GROUP BY/HAVING, подзапросы, CTE; транзакции/индексы ещё впереди |
-| DTO / Entity / маппинг | + | ✓ | Models + Mappers, без циклов JSON |
+| ASP.NET Core (pipeline, Minimal API) | + | ✓ | эндпоинты, JWT, 401/403, Swagger |
+| EF Core / миграции | + | ✓ | Include/ThenInclude, FK, Restrict/Cascade, один SaveChanges |
+| SQL | + | ~ / + | DBeaver до CTE; индексы отдельно, если понадобятся |
+| DTO / Entity / маппинг | + | ✓ | Models + Mappers |
 | Валидация | + | ✓ | FluentValidation + `OperationResult` |
-| Тесты (unit + integration) | ~ | ✓ | есть каркас; `GameValidatorTests` устарели; фокус не сейчас |
-| Git (checkout/commit/push/pull) | + | ✓ | коммиты есть; ветки `feature/...` ещё слабо |
+| Тесты (unit + integration) | ~ | ✓ | каркас есть; не приоритет |
+| Git (checkout/commit/push/pull) | + | ✓ | коммиты и remote есть; ветки ещё слабо |
 | Алгоритмы | ~ | ✓ | отдельно, 3–5 задач/неделя |
-| Auth (JWT) | + | ~ / ✓ | register/login, claims, Admin, свои заказы |
-| Docker | — | ~ | ближе к финалу проекта |
+| Auth (JWT) | + | ~ / ✓ | login/register, Admin, свои заказы |
+| Docker | — | ~ | ближе к финалу |
 
 ---
 
@@ -86,42 +87,39 @@
 - [x] Category: list/get/create/update/delete
 - [x] Id и Category в response DTO, `Include(Category)`
 - [x] Проверка существования категории при создании/смене категории
-- [x] FluentValidation вместо самописных `GameValidator`
+- [x] FluentValidation + `OperationResult` + `[MemberNotNullWhen]`
 - [x] Фильтры `GET /games`: categoryId, цена, search (`ILike`), page/pageSize
-- [x] Слой Service + Repository, DTO + мапперы, `OperationResult`
-- [x] `[MemberNotNullWhen]` на `IsSuccess` — в эндпоинтах не дублируем `Value is null`
 - [x] OpenAPI + Swagger UI; кнопка Authorize (Swashbuckle bearer)
-- [x] `.gitignore`, секреты не в git (`user-secrets` для `Jwt:Key`)
+- [x] `.gitignore`, `Jwt:Key` в user-secrets
 - [x] Git-коммиты и remote
 - [x] Users: регистрация, хеш пароля, логин, JWT
-- [x] Роль Admin на создание игры
-- [x] Orders: `POST /orders`, `GET /orders`, `GET /orders/{id}` (владелец / 404)
-- [x] FK: Game→Category Restrict, Order→User Restrict, OrderItem→Game Restrict, OrderItem→Order Cascade
-- [x] Правило «один тип — один файл» + неймспейсы по слоям
+- [x] Роль Admin на все записи игр и категорий; GET каталога публичный
+- [x] Orders: create/list/get by id (владелец / 404); один `SaveChangesAsync`
+- [x] FK Restrict/Cascade, один тип на файл, неймспейсы по слоям
+- [x] README в корне (запуск, секреты, миграции, сценарии Swagger)
+- [x] SQL-практика: SELECT…LIMIT, JOIN, LEFT JOIN, GROUP BY/HAVING, подзапросы, EXISTS, CTE
 
 ### Известный техдолг (не забывать)
 
-- [ ] Admin на `PUT`/`DELETE`/`PATCH` игр (сейчас только `POST /games`)
-- [ ] В `GET /games` нет `totalCount` в ответе (в плане этапа C была обёртка)
+- [ ] В `GET /games` нет `totalCount` в ответе
 - [ ] В `OrderDetails` нет `Id`
-- [ ] `GameValidatorTests` ссылаются на удалённый `GameValidator` — тесты красные, не чинить в приоритете
-- [ ] Integration-тесты не доведены под текущий контракт
+- [ ] `GameValidatorTests` устарели; integration-тесты не доведены — не чинить в приоритете
 - [ ] CS8604 в `JwtTokenService`: `Jwt:Key` теоретически null (в `Program.cs` уже есть throw)
-- [ ] Нет README, Docker Compose, фронта
-- [ ] SQL: индексы, явные транзакции (блок SELECT/JOIN/CTE закрыт)
+- [ ] Нет Docker Compose и нет витрины (`wwwroot`)
+- [ ] SQL-индексы не разбирали (явный `BeginTransaction` не нужен)
 
 ### Дальше по проекту (приоритет)
 
-1. **Транзакция на заказе** — сколько `SaveChanges` в `CreateOrder`, что атомарно
-2. **Git-ветки** + короткий README под портфолио
-3. По желанию: Admin на остальные записи каталога
-4. Алгоритмы 3–5 задач/неделя (параллельно)
-5. Docker Compose + простой HTML/JS — после README
-6. SQL поддерживать: раз в день короткий запрос по своей БД, не новый курс
+1. **Алгоритмы** 3–5 задач в неделю (массивы, строки, словари, два указателя)
+2. **Git-ветки** `feature/...` на следующую маленькую фичу
+3. По желанию: одна статическая страница в `wwwroot` + `fetch` + CSS с CDN (не React, не MVC)
+4. Docker Compose (PostgreSQL, опционально API)
+5. SQL: короткий запрос по своей БД время от времени
+6. Мелочи API (`totalCount`, `OrderDetails.Id`) — только если останется время
 
 Полный roadmap: [`plan.md`](./plan.md).
 
-Этапы плана: A, C, D (минимум), E (обязательное) закрыты. SQL (B) по запросам закрыт; индексы/транзакции — хвост. F/G/H ещё впереди.
+Этапы A, C, D, E (обязательное) и README закрыты. SQL (B) по запросам закрыт. G (витрина) и H (Docker) по желанию. I (алгоритмы, ветки, рассказ о проекте) — основной фокус к отбору.
 
 ---
 
@@ -131,18 +129,18 @@
 
 Идём по этапам в `plan.md`. После каждого этапа обновляем чеклист выше.
 
-### B. SQL (ежедневно 20–40 мин)
-
-На базе GameStore в DBeaver:
+### B. SQL (поддерживать, не курс заново)
 
 | Уровень | Темы | Статус |
 | --- | --- | --- |
 | 1 | SELECT, WHERE, ORDER BY, LIMIT | ✅ |
-| 2 | INNER JOIN + LEFT JOIN (игры без покупок; продажи с нулями) | ✅ |
+| 2 | INNER JOIN + LEFT JOIN | ✅ |
 | 3 | GROUP BY, SUM, HAVING, AVG | ✅ |
 | 4 | NULL / IS NULL, COALESCE, CASE | ✅ |
 | 5 | IN, EXISTS / NOT EXISTS, скалярный подзапрос | ✅ |
-| 6 | CTE (`WITH`); индексы; транзакции | ~ CTE есть; индексы и транзакции нет |
+| 6 | CTE | ✅ |
+| 6b | Индексы | ☐ |
+| 6c | Транзакция заказа через один `SaveChanges` | ✅ (явный `BeginTransaction` не делали) |
 
 ### C. Алгоритмы (для отбора)
 
@@ -176,31 +174,29 @@
 
 - Id в DTO, `Include(Category)`, проверка `CategoryId`, Category PUT/DELETE.
 - FluentValidation, фильтры `GET /games`, `.gitignore`, первые коммиты.
-- Тесты сознательно отошли на второй план.
 
 ### 2026-10-23…25 — Users, JWT, Admin
 
 - Users, хеш пароля, логин, JWT, Swagger bearer.
-- `POST /games` только с ролью Admin.
+- Сначала Admin только на `POST /games`.
 
-### 2026-10-25…26 — Orders, FK, неймспейсы, ошибки
+### 2026-10-25…26 — Orders, FK, ошибки
 
 - Заказы, Restrict/Cascade, свои заказы, `GET /orders/{id}` (чужой → 404).
-- `MemberNotNullWhen` на `OperationResult`: эндпоинт не дублирует `Value is null`.
-- 401 = нет/битый токен; 404 = нет ресурса или не твой.
+- `MemberNotNullWhen` на `OperationResult`.
 
 ### 2026-10-26…27 — SQL с нуля (DBeaver)
 
-- SELECT, WHERE, ORDER BY, LIMIT на `"Games"` (8 игр).
-- JOIN игр с категориями; цепочка заказы → пользователи → позиции → игры (4 строки чека).
-- GROUP BY + SUM: в SELECT только ключ группы или агрегат. HAVING — фильтр корзин (сумма > 100).
-- LEFT JOIN + IS NULL — игры без покупок; SUM + COALESCE — штуки с нулями.
-- CASE sold / not sold. AVG: без GROUP BY — одна цифра на таблицу.
-- Подзапрос: цена > среднего (внутренний SELECT без внешнего псевдонима `g`).
-- IN список id категорий; EXISTS / NOT EXISTS как LINQ `Any` / `!Any`.
-- CTE: это таблица, не переменная; `FROM` должен включать то, из чего берёшь колонки. Для среднего — `(SELECT average FROM a)`. Для одного фильтра сумм проще HAVING, чем WITH.
-- CROSS JOIN слышали (одна строка × все игры), отдельно не тренировали.
-- Дальше: транзакция в `CreateOrder` (`SaveChanges`).
+- SELECT…LIMIT, JOIN, GROUP BY/HAVING, LEFT JOIN, CASE, AVG, IN, EXISTS, CTE.
+- Для одного фильтра сумм проще HAVING, чем WITH.
+
+### 2026-10-27…28 — Admin на запись, README, термины auth
+
+- Один `SaveChangesAsync` в `CreateOrder`: `Add` только в памяти, сохранение — одна транзакция.
+- Admin на PUT/DELETE/PATCH игр и на запись категорий; GET каталога публичный.
+- Аутентификация = кто ты (401); авторизация = можно ли (403 или 404 на чужой заказ).
+- README: запуск, user-secrets, миграции, сценарии Swagger без curl как основного пути.
+- Дальше: алгоритмы; витрина только как статика из того же API, если захочется демо.
 
 ---
 
