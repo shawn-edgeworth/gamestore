@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заказы — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Мои заказы</h1>
+        <p id="status">Загрузка…</p>
+        <div id="orders"></div>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("orders");
+
+        (async function () {
+            if (!requireLogin()) {
+                return;
+            }
+
+            const status = document.getElementById("status");
+            const root = document.getElementById("orders");
+
+            try {
+                const response = await fetch("/orders", { headers: authHeaders() });
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    return;
+                }
+
+                const data = await response.json();
+                const orders = data.orders ?? [];
+
+                if (orders.length === 0) {
+                    status.textContent = "Заказов пока нет.";
+                    return;
+                }
+
+                status.textContent = "";
+                root.replaceChildren();
+
+                for (const order of orders) {
+                    const article = document.createElement("article");
+                    const heading = document.createElement("h2");
+                    const when = order.createdAt
+                        ? new Date(order.createdAt).toLocaleString("ru-RU")
+                        : "";
+                    heading.textContent = when || "Заказ";
+
+                    const list = document.createElement("ul");
+                    for (const item of order.items ?? []) {
+                        const line = document.createElement("li");
+                        line.textContent =
+                            item.gameName + " × " + item.quantity + " · " + item.unitPrice;
+                        list.append(line);
+                    }
+
+                    article.append(heading, list);
+                    root.append(article);
+                }
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        })();
+    </script>
+</body>
+</html>

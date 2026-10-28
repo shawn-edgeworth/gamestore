@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Каталог</h1>
+        <p>Первые 10 игр. Полный список — во вкладке «Все игры».</p>
+        <p id="status">Загрузка…</p>
+        <div id="games"></div>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("home");
+
+        (async function () {
+            const status = document.getElementById("status");
+            const root = document.getElementById("games");
+
+            try {
+                const games = await fetchGames({ page: 1, pageSize: 10 });
+                if (games.length === 0) {
+                    status.textContent = "Каталог пуст.";
+                    return;
+                }
+
+                status.textContent = "";
+                renderGames(root, games);
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        })();
+    </script>
+</body>
+</html>

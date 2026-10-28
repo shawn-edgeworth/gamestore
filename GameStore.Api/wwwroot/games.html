@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Все игры — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Все игры</h1>
+        <div class="grid">
+            <label>
+                На странице
+                <select id="page-size">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </label>
+        </div>
+        <p id="status">Загрузка…</p>
+        <div id="games"></div>
+        <div class="grid">
+            <button type="button" id="prev">Назад</button>
+            <p id="page-label"></p>
+            <button type="button" id="next">Вперёд</button>
+        </div>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("games");
+
+        const allowedSizes = new Set([10, 25, 50]);
+        const params = new URLSearchParams(window.location.search);
+        let page = Number(params.get("page")) || 1;
+        let pageSize = Number(params.get("pageSize")) || 10;
+
+        if (page < 1) {
+            page = 1;
+        }
+
+        if (!allowedSizes.has(pageSize)) {
+            pageSize = 10;
+        }
+
+        const sizeSelect = document.getElementById("page-size");
+        const status = document.getElementById("status");
+        const root = document.getElementById("games");
+        const prev = document.getElementById("prev");
+        const next = document.getElementById("next");
+        const pageLabel = document.getElementById("page-label");
+
+        sizeSelect.value = String(pageSize);
+
+        function goTo(nextPage, nextSize) {
+            const query = new URLSearchParams();
+            query.set("page", String(nextPage));
+            query.set("pageSize", String(nextSize));
+            window.location.search = query.toString();
+        }
+
+        sizeSelect.addEventListener("change", () => {
+            goTo(1, Number(sizeSelect.value));
+        });
+
+        prev.addEventListener("click", () => {
+            if (page > 1) {
+                goTo(page - 1, pageSize);
+            }
+        });
+
+        next.addEventListener("click", () => {
+            goTo(page + 1, pageSize);
+        });
+
+        (async function () {
+            try {
+                const games = await fetchGames({ page, pageSize });
+
+                if (games.length === 0) {
+                    status.textContent = page === 1
+                        ? "Каталог пуст."
+                        : "На этой странице игр нет.";
+                } else {
+                    status.textContent = "";
+                    renderGames(root, games);
+                }
+
+                pageLabel.textContent = "Страница " + page;
+                prev.disabled = page <= 1;
+                next.disabled = games.length < pageSize;
+            } catch (error) {
+                status.textContent = error.message;
+                prev.disabled = true;
+                next.disabled = true;
+            }
+        })();
+    </script>
+</body>
+</html>
