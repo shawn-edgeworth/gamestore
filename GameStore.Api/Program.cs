@@ -348,14 +348,31 @@ app.MapPost("/users/me/balance", async (ClaimsPrincipal user, UserService userSe
     return Results.Ok(result.Value.ToDetailsResponse());
 }).RequireAuthorization();
 
-app.MapGet("/cart",async (ClaimsPrincipal user,CartService cartService)=> 
+app.MapGet("/cart", async (ClaimsPrincipal user, CartService cartService) =>
 {
-     if (!TryGetUserId(user, out var userId))
+    if (!TryGetUserId(user, out var userId))
     {
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
 
     var result = await cartService.GetCart(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPost("/cart/items", async (ClaimsPrincipal user, CartService cartService, AddCartItemRequest request) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.AddItem(userId, request);
 
     if (!result.IsSuccess)
     {
