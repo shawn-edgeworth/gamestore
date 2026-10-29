@@ -5,5 +5,6 @@ public enum OperationErrorType
     None,
     Validation,
     NotFound,
-    Authorization
+    Authorization,
+    BadRequest
 }

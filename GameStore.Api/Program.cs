@@ -274,7 +274,6 @@ app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, C
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-
     return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
 
@@ -339,6 +338,7 @@ static IResult ToHttpError(OperationErrorType errorType, string? error)
         OperationErrorType.Validation => Results.BadRequest(error),
         OperationErrorType.NotFound => Results.NotFound(error),
         OperationErrorType.Authorization => Results.Unauthorized(),
+        OperationErrorType.BadRequest => Results.BadRequest(error),
         _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
     };
 }

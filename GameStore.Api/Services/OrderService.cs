@@ -8,16 +8,19 @@ namespace GameStore.Api.Services
     {
         private readonly GameRepository gameRepository;
         private readonly OrderRepository orderRepository;
+        private readonly UserRepository userRepository;
         private readonly IValidator<CreateOrderRequest> createOrderValidator;
 
         public OrderService(
             GameRepository gameRepository,
             OrderRepository orderRepository,
+            UserRepository userRepository,
             IValidator<CreateOrderRequest> createOrderValidator)
         {
             this.createOrderValidator = createOrderValidator;
             this.gameRepository = gameRepository;
             this.orderRepository = orderRepository;
+            this.userRepository = userRepository;
         }
 
         public async Task<OperationResult<Order>> CreateOrder(int userId, CreateOrderRequest request)
@@ -30,8 +33,15 @@ namespace GameStore.Api.Services
                     OperationErrorType.Validation);
             }
 
-            var orderItems = new List<OrderItem>();
+            var user = await userRepository.GetUserById(userId);
+            if (user is null)
+            {
+                return OperationResult<Order>.Failure("User is not found.",
+                   OperationErrorType.NotFound);
+            }
 
+            var orderItems = new List<OrderItem>();
+            var totalPrice = 0m;
             foreach (var item in request.OrderItems)
             {
                 var game = await gameRepository.GetGameById(item.GameId);
@@ -48,10 +58,17 @@ namespace GameStore.Api.Services
                     UnitPrice = game.Price,
                     Game = game
                 });
+
+                totalPrice += item.Quantity * game.Price;
             }
 
-            var order = await orderRepository.CreateOrder(userId, orderItems);
+            if(user.Balance < totalPrice)
+            {
+                return OperationResult<Order>.Failure("User doesn't have enough money.",
+                   OperationErrorType.BadRequest);
+            }
 
+            var order = await orderRepository.CreateOrder(user,totalPrice, orderItems);
             return OperationResult<Order>.Success(order);
         }
 
