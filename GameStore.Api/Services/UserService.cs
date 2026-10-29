@@ -11,18 +11,21 @@ public class UserService
     private readonly IValidator<UserRegisterRequest> userRegisterValidator;
     private readonly IValidator<UserLoginRequest> userLoginValidator;
     private readonly IPasswordHasher<User> passwordHasher;
+    private readonly IValidator<UserAddMoneyRequest> userAddMoneyValidator;
     private readonly JwtTokenService jwtTokenService;
 
     public UserService(UserRepository userRepository,
     IValidator<UserRegisterRequest> userRegisterValidator,
     IValidator<UserLoginRequest> userLoginValidator,
     IPasswordHasher<User> passwordHasher,
+    IValidator<UserAddMoneyRequest> userAddMoneyValidator,
     JwtTokenService jwtTokenService)
     {
         this.userRepository = userRepository;
         this.userRegisterValidator = userRegisterValidator;
         this.userLoginValidator = userLoginValidator;
         this.passwordHasher = passwordHasher;
+        this.userAddMoneyValidator = userAddMoneyValidator;
         this.jwtTokenService = jwtTokenService;
     }
 
@@ -64,7 +67,7 @@ public class UserService
         }
 
         var email = request.Email.Trim().ToLower();
-        var user = await userRepository.GetUser(email);
+        var user = await userRepository.GetUserByEmail(email);
 
         if (user is null)
         {
@@ -89,5 +92,26 @@ public class UserService
                 Role = user.Role
             }
         );
+    }
+
+    public async Task<OperationResult<User>> AddMoney(int userId, UserAddMoneyRequest request)
+    {
+        var validation = await userAddMoneyValidator.ValidateAsync(request);
+
+        if (!validation.IsValid)
+        {
+            return OperationResult<User>.Failure(validation.Errors[0].ErrorMessage,
+                OperationErrorType.Validation);
+        }
+
+        var user = await userRepository.AddMoney(userId, request.Amount);
+
+        if (user is null)
+        {
+            return OperationResult<User>.Failure("User is not found",
+               OperationErrorType.NotFound);
+        }
+
+        return OperationResult<User>.Success(user);
     }
 }

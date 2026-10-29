@@ -7,6 +7,9 @@ public class UpdateGamePriceRequestValidator : AbstractValidator<UpdateGamePrice
 {
      public UpdateGamePriceRequestValidator()
     {
-        RuleFor(x=>x.Price).NotNull().GreaterThan(0);
+        RuleFor(x=>x.Price)
+            .NotNull()
+            .GreaterThan(0)
+            .PrecisionScale(MoneyHelper.Precision, MoneyHelper.Scale, true);
     }
 }

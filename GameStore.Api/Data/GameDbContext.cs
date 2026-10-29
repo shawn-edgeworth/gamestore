@@ -39,12 +39,22 @@ public class GameDbContext : DbContext
             .HasForeignKey(item => item.GameId)
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
-        
+
         modelBuilder.Entity<OrderItem>()
-            .HasOne<Order>()                 
+            .HasOne<Order>()
             .WithMany(order => order.Items)
             .HasForeignKey(item => item.OrderId)
             .OnDelete(DeleteBehavior.Cascade)
             .IsRequired();
+
+        modelBuilder.Entity<User>()
+            .Property(user => user.Balance)
+            .HasPrecision(MoneyHelper.Precision, MoneyHelper.Scale);
+        modelBuilder.Entity<Game>()
+            .Property(game => game.Price)
+            .HasPrecision(MoneyHelper.Precision, MoneyHelper.Scale);
+        modelBuilder.Entity<OrderItem>()
+            .Property(orderItem => orderItem.UnitPrice)
+            .HasPrecision(MoneyHelper.Precision, MoneyHelper.Scale);
     }
 }
