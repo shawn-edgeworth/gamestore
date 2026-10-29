@@ -30,27 +30,20 @@ function formToGame(form) {
     };
 }
 
-async function loadAdmin() {
-    if (!requireAdmin()) {
+async function loadGamesAdmin() {
+    const gameForm = document.getElementById("game-form");
+    if (!gameForm || !requireAdmin()) {
         return;
     }
 
     const status = document.getElementById("admin-status");
-    const gameForm = document.getElementById("game-form");
-    const categoryForm = document.getElementById("category-form");
     const gamesBody = document.getElementById("games-body");
-    const categoriesBody = document.getElementById("categories-body");
     const categorySelect = gameForm.categoryId;
 
     async function reload() {
         status.textContent = "";
         const [games, categories] = await Promise.all([fetchGames({}), fetchCategories()]);
         fillCategorySelect(categorySelect, categories, gameForm.categoryId.value);
-        renderGameRows(games, categories);
-        renderCategoryRows(categories);
-    }
-
-    function renderGameRows(games) {
         gamesBody.replaceChildren();
 
         for (const game of games) {
@@ -63,7 +56,7 @@ async function loadAdmin() {
             name.textContent = game.name;
 
             const price = document.createElement("td");
-            price.textContent = String(game.price);
+            price.textContent = formatMoney(game.price);
 
             const category = document.createElement("td");
             category.textContent = game.categoryName ?? "";
@@ -113,7 +106,53 @@ async function loadAdmin() {
         }
     }
 
-    function renderCategoryRows(categories) {
+    gameForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const body = formToGame(gameForm);
+        const id = gameForm.gameId.value;
+        const url = id ? "/games/" + id : "/games";
+        const method = id ? "PUT" : "POST";
+
+        const response = await fetch(url, {
+            method,
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            status.textContent = await readApiError(response);
+            return;
+        }
+
+        gameForm.reset();
+        gameForm.gameId.value = "";
+        await reload();
+    });
+
+    document.getElementById("game-reset").addEventListener("click", () => {
+        gameForm.reset();
+        gameForm.gameId.value = "";
+    });
+
+    try {
+        await reload();
+    } catch (error) {
+        status.textContent = error.message;
+    }
+}
+
+async function loadCategoriesAdmin() {
+    const categoryForm = document.getElementById("category-form");
+    if (!categoryForm || !requireAdmin()) {
+        return;
+    }
+
+    const status = document.getElementById("admin-status");
+    const categoriesBody = document.getElementById("categories-body");
+
+    async function reload() {
+        status.textContent = "";
+        const categories = await fetchCategories();
         categoriesBody.replaceChildren();
 
         for (const category of categories) {
@@ -162,34 +201,6 @@ async function loadAdmin() {
         }
     }
 
-    gameForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const body = formToGame(gameForm);
-        const id = gameForm.gameId.value;
-        const url = id ? "/games/" + id : "/games";
-        const method = id ? "PUT" : "POST";
-
-        const response = await fetch(url, {
-            method,
-            headers: authHeaders(),
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            status.textContent = await readApiError(response);
-            return;
-        }
-
-        gameForm.reset();
-        gameForm.gameId.value = "";
-        await reload();
-    });
-
-    document.getElementById("game-reset").addEventListener("click", () => {
-        gameForm.reset();
-        gameForm.gameId.value = "";
-    });
-
     categoryForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const body = { name: categoryForm.name.value.trim() };
@@ -225,4 +236,5 @@ async function loadAdmin() {
     }
 }
 
-loadAdmin();
+loadGamesAdmin();
+loadCategoriesAdmin();

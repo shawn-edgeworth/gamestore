@@ -11,7 +11,17 @@ function mountHeader(current) {
     }
 
     if (isAdmin()) {
-        extraLinks.push('<li><a href="/admin.html" data-nav="admin">Редактировать</a></li>');
+        extraLinks.push(`
+            <li>
+                <details class="dropdown">
+                    <summary>Редактировать</summary>
+                    <ul>
+                        <li><a href="/admin-games.html" data-nav="admin-games">Игры</a></li>
+                        <li><a href="/admin-categories.html" data-nav="admin-categories">Категории</a></li>
+                    </ul>
+                </details>
+            </li>
+        `);
     }
 
     header.innerHTML = `

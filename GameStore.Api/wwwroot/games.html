@@ -11,19 +11,14 @@
     <header class="container" id="site-header"></header>
     <main class="container">
         <h1>Все игры</h1>
-        <div class="grid">
-            <label>
-                На странице
-                <select id="page-size">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-            </label>
-        </div>
+        <p class="page-sizes" id="page-sizes">
+            <a href="#" data-size="10">10</a>
+            <a href="#" data-size="25">25</a>
+            <a href="#" data-size="50">50</a>
+        </p>
         <p id="status">Загрузка…</p>
         <div id="games"></div>
-        <div class="grid">
+        <div class="pager">
             <button type="button" id="prev">Назад</button>
             <p id="page-label"></p>
             <button type="button" id="next">Вперёд</button>
@@ -47,14 +42,11 @@
             pageSize = 10;
         }
 
-        const sizeSelect = document.getElementById("page-size");
         const status = document.getElementById("status");
         const root = document.getElementById("games");
         const prev = document.getElementById("prev");
         const next = document.getElementById("next");
         const pageLabel = document.getElementById("page-label");
-
-        sizeSelect.value = String(pageSize);
 
         function goTo(nextPage, nextSize) {
             const query = new URLSearchParams();
@@ -63,9 +55,17 @@
             window.location.search = query.toString();
         }
 
-        sizeSelect.addEventListener("change", () => {
-            goTo(1, Number(sizeSelect.value));
-        });
+        for (const link of document.querySelectorAll("#page-sizes a")) {
+            const size = Number(link.getAttribute("data-size"));
+            if (size === pageSize) {
+                link.setAttribute("aria-current", "page");
+            }
+
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                goTo(1, size);
+            });
+        }
 
         prev.addEventListener("click", () => {
             if (page > 1) {

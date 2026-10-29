@@ -57,6 +57,15 @@ function authHeaders() {
     return headers;
 }
 
+function formatMoney(value) {
+    const amount = Number(value);
+    if (Number.isNaN(amount)) {
+        return "$0";
+    }
+
+    return "$" + amount;
+}
+
 function createGameImage(url, alt) {
     const img = document.createElement("img");
     img.alt = alt ?? "";
@@ -75,14 +84,19 @@ function renderGames(root, games) {
         const article = document.createElement("article");
         article.className = "game-card";
 
+        const link = document.createElement("a");
+        link.href = "/game.html?id=" + game.id;
+        link.className = "game-card-link";
+
         const title = document.createElement("h2");
         title.textContent = game.name;
 
         const meta = document.createElement("p");
         const category = game.categoryName ?? "Без категории";
-        meta.textContent = category + " · " + game.price;
+        meta.textContent = category + " · " + formatMoney(game.price);
 
-        article.append(createGameImage(game.imageUrl, game.name), title, meta);
+        link.append(createGameImage(game.imageUrl, game.name), title, meta);
+        article.append(link);
         root.append(article);
     }
 }
@@ -197,6 +211,14 @@ function requireLogin() {
     }
 
     return true;
+}
+
+function safeNextPath(value) {
+    if (!value || !value.startsWith("/") || value.startsWith("//")) {
+        return "/";
+    }
+
+    return value;
 }
 
 function requireAdmin() {

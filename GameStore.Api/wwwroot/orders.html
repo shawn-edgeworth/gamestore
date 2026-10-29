@@ -54,14 +54,20 @@
                     heading.textContent = when || "Заказ";
 
                     const list = document.createElement("ul");
+                    let total = 0;
                     for (const item of order.items ?? []) {
                         const line = document.createElement("li");
+                        const lineSum = Number(item.unitPrice) * Number(item.quantity);
+                        total += lineSum;
                         line.textContent =
-                            item.gameName + " × " + item.quantity + " · " + item.unitPrice;
+                            item.gameName + " × " + item.quantity + " · " + formatMoney(item.unitPrice);
                         list.append(line);
                     }
 
-                    article.append(heading, list);
+                    const sum = document.createElement("p");
+                    sum.textContent = "Итого: " + formatMoney(total);
+
+                    article.append(heading, list, sum);
                     root.append(article);
                 }
             } catch (error) {

@@ -55,7 +55,8 @@
 
             const data = await response.json();
             saveSession(data.token, data.email, data.role);
-            window.location.href = "/";
+            const next = new URLSearchParams(window.location.search).get("next");
+            window.location.href = safeNextPath(next);
         }
 
         form.addEventListener("submit", async (event) => {

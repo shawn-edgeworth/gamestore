@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <p id="status">Загрузка…</p>
+        <article id="detail" class="game-detail" hidden></article>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("games");
+
+        const params = new URLSearchParams(window.location.search);
+        const id = Number(params.get("id"));
+        const status = document.getElementById("status");
+        const detail = document.getElementById("detail");
+
+        async function buy(gameId) {
+            if (!isLoggedIn()) {
+                window.location.href = "/login.html?next=" + encodeURIComponent("/game.html?id=" + gameId);
+                return;
+            }
+
+            const response = await fetch("/orders", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    orderItems: [{ gameId, quantity: 1 }]
+                })
+            });
+
+            if (!response.ok) {
+                status.textContent = await readApiError(response);
+                return;
+            }
+
+            window.location.href = "/orders.html";
+        }
+
+        (async function () {
+            if (!id) {
+                status.textContent = "Не указан id игры.";
+                return;
+            }
+
+            try {
+                const response = await fetch("/games/" + id);
+                if (response.status === 404) {
+                    status.textContent = "Игра не найдена.";
+                    return;
+                }
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    return;
+                }
+
+                const game = await response.json();
+                document.title = game.name + " — GameStore";
+                status.textContent = "";
+                detail.hidden = false;
+                detail.replaceChildren();
+
+                const title = document.createElement("h1");
+                title.textContent = game.name;
+
+                const meta = document.createElement("p");
+                const category = game.categoryName ?? "Без категории";
+                meta.textContent = category + " · " + formatMoney(game.price);
+
+                const description = document.createElement("p");
+                description.textContent = game.description ?? "";
+
+                const buyButton = document.createElement("button");
+                buyButton.type = "button";
+                buyButton.textContent = "Купить";
+                buyButton.addEventListener("click", () => buy(game.id));
+
+                detail.append(
+                    createGameImage(game.imageUrl, game.name),
+                    title,
+                    meta,
+                    description,
+                    buyButton
+                );
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        })();
+    </script>
+</body>
+</html>
