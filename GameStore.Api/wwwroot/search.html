@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Поиск</h1>
+        <p id="status">Загрузка…</p>
+        <div id="games"></div>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("search");
+
+        const params = new URLSearchParams(window.location.search);
+        const search = (params.get("search") ?? "").trim();
+        const status = document.getElementById("status");
+        const root = document.getElementById("games");
+
+        (async function () {
+            if (!search) {
+                status.textContent = "Введите имя игры в поле «Поиск по имени» сверху и нажмите «Найти».";
+                return;
+            }
+
+            try {
+                const games = await fetchGames({ search });
+                if (games.length === 0) {
+                    status.textContent = "Ничего не найдено по запросу «" + search + "».";
+                    return;
+                }
+
+                status.textContent = "Найдено: " + games.length + " по запросу «" + search + "».";
+                renderGames(root, games);
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        })();
+    </script>
+</body>
+</html>

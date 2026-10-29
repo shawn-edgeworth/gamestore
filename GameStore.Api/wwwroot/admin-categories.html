@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Категории — редактирование</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Категории</h1>
+        <p id="admin-status"></p>
+        <form id="category-form">
+            <input type="hidden" name="categoryId">
+            <div class="grid">
+                <label>
+                    Название (3–16 символов)
+                    <input name="name" required minlength="3" maxlength="16">
+                </label>
+            </div>
+            <div class="grid">
+                <button type="submit">Сохранить категорию</button>
+                <button type="button" id="category-reset" class="secondary">Новая категория</button>
+            </div>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="categories-body"></tbody>
+        </table>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("admin-categories");
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

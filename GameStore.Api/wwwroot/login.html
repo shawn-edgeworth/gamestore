@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Вход и регистрация</h1>
+        <form id="auth-form">
+            <label>
+                Почта
+                <input type="email" name="email" autocomplete="email" required>
+            </label>
+            <label>
+                Пароль
+                <input type="password" name="password" autocomplete="current-password" required minlength="6">
+            </label>
+            <p id="status"></p>
+            <div class="grid">
+                <button type="submit" name="action" value="register">Регистрация</button>
+                <button type="submit" name="action" value="login">Вход</button>
+            </div>
+        </form>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("login");
+
+        const form = document.getElementById("auth-form");
+        const status = document.getElementById("status");
+        let pendingAction = "login";
+
+        form.querySelectorAll("button[type=submit]").forEach((button) => {
+            button.addEventListener("click", () => {
+                pendingAction = button.value;
+            });
+        });
+
+        async function login(email, password) {
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!response.ok) {
+                throw new Error(await readApiError(response));
+            }
+
+            const data = await response.json();
+            saveSession(data.token, data.email, data.role);
+            const next = new URLSearchParams(window.location.search).get("next");
+            window.location.href = safeNextPath(next);
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            status.textContent = "";
+
+            const email = form.email.value.trim();
+            const password = form.password.value;
+
+            try {
+                if (pendingAction === "register") {
+                    const response = await fetch("/register", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(await readApiError(response));
+                    }
+                }
+
+                await login(email, password);
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>
