@@ -28,7 +28,7 @@ public static class OrderMapper
         return new OrderItemDetails
         {
             GameId = orderItem.GameId,
-            GameName = orderItem.Game.Name,
+            GameName = orderItem.GameName,
             Quantity = orderItem.Quantity,
             UnitPrice = orderItem.UnitPrice
         };

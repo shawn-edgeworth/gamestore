@@ -56,6 +56,7 @@ namespace GameStore.Api.Services
                     GameId = item.GameId,
                     Quantity = item.Quantity,
                     UnitPrice = game.Price,
+                    GameName = game.Name,
                     Game = game
                 });
 

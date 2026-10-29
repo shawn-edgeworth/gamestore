@@ -22,6 +22,52 @@ namespace GameStore.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GameStore.Api.Models.Cart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Carts");
+                });
+
+            modelBuilder.Entity("GameStore.Api.Models.CartItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GameId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("CartId", "GameId")
+                        .IsUnique();
+
+                    b.ToTable("CartItem");
+                });
+
             modelBuilder.Entity("GameStore.Api.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -106,6 +152,10 @@ namespace GameStore.Api.Migrations
                     b.Property<int>("GameId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("GameName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
@@ -154,6 +204,34 @@ namespace GameStore.Api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("GameStore.Api.Models.Cart", b =>
+                {
+                    b.HasOne("GameStore.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GameStore.Api.Models.CartItem", b =>
+                {
+                    b.HasOne("GameStore.Api.Models.Cart", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GameStore.Api.Models.Game", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+                });
+
             modelBuilder.Entity("GameStore.Api.Models.Game", b =>
                 {
                     b.HasOne("GameStore.Api.Models.Category", "Category")
@@ -191,6 +269,11 @@ namespace GameStore.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("GameStore.Api.Models.Cart", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("GameStore.Api.Models.Category", b =>
