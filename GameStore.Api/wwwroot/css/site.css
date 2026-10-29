@@ -1,3 +1,10 @@
+.nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    white-space: nowrap;
+}
+
 nav form {
     margin: 0;
 }

@@ -46,5 +46,5 @@ function mountHeader(current) {
     `;
 
     markCurrentNav(current);
-    renderNav(current);
+    return renderNav(current);
 }

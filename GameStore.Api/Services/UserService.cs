@@ -94,6 +94,18 @@ public class UserService
         );
     }
 
+    public async Task<OperationResult<User>> GetCurrentUser(int userId)
+    {
+        var user = await userRepository.GetUserById(userId);
+        if (user is null)
+        {
+            return OperationResult<User>.Failure("User is not found.",
+                OperationErrorType.NotFound);
+        }
+
+        return OperationResult<User>.Success(user);
+    }
+
     public async Task<OperationResult<User>> AddMoney(int userId, UserAddMoneyRequest request)
     {
         var validation = await userAddMoneyValidator.ValidateAsync(request);

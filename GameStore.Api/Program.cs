@@ -312,6 +312,23 @@ app.MapGet("/orders/{id}", async (int id, OrderService orderService, ClaimsPrinc
 }).RequireAuthorization();
 
 
+app.MapGet("/users/me", async (ClaimsPrincipal user, UserService userService) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await userService.GetCurrentUser(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToDetailsResponse());
+}).RequireAuthorization();
+
 app.MapPost("/users/me/balance", async (ClaimsPrincipal user, UserService userService, UserAddMoneyRequest request) =>
 {
     if (!TryGetUserId(user, out var userId))

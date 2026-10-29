@@ -63,7 +63,7 @@ function formatMoney(value) {
         return "$0";
     }
 
-    return "$" + amount;
+    return "$" + amount.toFixed(2);
 }
 
 function createGameImage(url, alt) {
@@ -138,6 +138,15 @@ async function fetchCategories() {
     return data.categories ?? [];
 }
 
+async function fetchCurrentUser() {
+    const response = await fetch("/users/me", { headers: authHeaders() });
+    if (!response.ok) {
+        throw new Error(await readApiError(response));
+    }
+
+    return await response.json();
+}
+
 async function readApiError(response) {
     const raw = await response.text();
 
@@ -157,7 +166,7 @@ async function readApiError(response) {
     return raw;
 }
 
-function renderNav(current) {
+async function renderNav(current) {
     const host = document.getElementById("nav-auth");
     if (!host) {
         return;
@@ -169,9 +178,24 @@ function renderNav(current) {
     const token = getToken();
 
     if (token && email) {
+        host.className = "nav-auth";
+
         const name = document.createElement("span");
         name.textContent = email;
-        name.style.marginRight = "0.75rem";
+
+        const wallet = document.createElement("a");
+        wallet.href = "/wallet.html";
+        wallet.textContent = formatMoney(0);
+        if (current === "wallet") {
+            wallet.setAttribute("aria-current", "page");
+        }
+
+        try {
+            const me = await fetchCurrentUser();
+            wallet.textContent = formatMoney(me.balance);
+        } catch {
+            wallet.textContent = "Кошелёк";
+        }
 
         const logout = document.createElement("button");
         logout.type = "button";
@@ -181,7 +205,7 @@ function renderNav(current) {
             window.location.href = "/";
         });
 
-        host.append(name, logout);
+        host.append(name, wallet, logout);
         return;
     }
 
