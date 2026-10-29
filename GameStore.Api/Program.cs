@@ -69,6 +69,8 @@ builder.Services.AddScoped<UserService>();
 
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<CartRepository>();
+builder.Services.AddScoped<CartService>();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -344,6 +346,23 @@ app.MapPost("/users/me/balance", async (ClaimsPrincipal user, UserService userSe
     }
 
     return Results.Ok(result.Value.ToDetailsResponse());
+}).RequireAuthorization();
+
+app.MapGet("/cart",async (ClaimsPrincipal user,CartService cartService)=> 
+{
+     if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.GetCart(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
 }).RequireAuthorization();
 
 app.Run();
