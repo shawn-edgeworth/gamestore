@@ -11,6 +11,7 @@ namespace GameStore.Api.Mappers
                 Id = user.Id,
                 Email = user.Email,
                 Role = user.Role,
+                Balance = user.Balance
             };
         }
     }

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кошелёк — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Кошелёк</h1>
+        <p id="current">Текущий баланс: …</p>
+        <form id="top-up">
+            <label>
+                Сумма пополнения ($)
+                <input name="amount" type="number" min="0.01" step="0.01" required>
+            </label>
+            <p id="status"></p>
+            <button type="submit">Пополнить</button>
+        </form>
+    </main>
+    <script src="/js/site.js"></script>
+    <script src="/js/layout.js"></script>
+    <script>
+        mountHeader("wallet");
+
+        if (requireLogin()) {
+            const current = document.getElementById("current");
+            const status = document.getElementById("status");
+            const form = document.getElementById("top-up");
+
+            async function showBalance() {
+                const me = await fetchCurrentUser();
+                current.textContent = "Текущий баланс: " + formatMoney(me.balance);
+            }
+
+            showBalance().catch((error) => {
+                current.textContent = error.message;
+            });
+
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                status.textContent = "";
+
+                const amount = Number(form.amount.value);
+                const response = await fetch("/users/me/balance", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({ amount })
+                });
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    return;
+                }
+
+                const me = await response.json();
+                current.textContent = "Текущий баланс: " + formatMoney(me.balance);
+                form.reset();
+                await mountHeader("wallet");
+            });
+        }
+    </script>
+</body>
+</html>

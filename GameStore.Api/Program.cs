@@ -37,8 +37,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSwaggerGen(options =>
 {
-    // ...
-
     options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -276,7 +274,6 @@ app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, C
         return ToHttpError(result.ErrorType, result.Error);
     }
 
-
     return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
 
@@ -314,6 +311,41 @@ app.MapGet("/orders/{id}", async (int id, OrderService orderService, ClaimsPrinc
     return Results.Ok(result.Value.ToResponse());
 }).RequireAuthorization();
 
+
+app.MapGet("/users/me", async (ClaimsPrincipal user, UserService userService) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await userService.GetCurrentUser(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToDetailsResponse());
+}).RequireAuthorization();
+
+app.MapPost("/users/me/balance", async (ClaimsPrincipal user, UserService userService, UserAddMoneyRequest request) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await userService.AddMoney(userId, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToDetailsResponse());
+}).RequireAuthorization();
+
 app.Run();
 
 static IResult ToHttpError(OperationErrorType errorType, string? error)
@@ -323,8 +355,14 @@ static IResult ToHttpError(OperationErrorType errorType, string? error)
         OperationErrorType.Validation => Results.BadRequest(error),
         OperationErrorType.NotFound => Results.NotFound(error),
         OperationErrorType.Authorization => Results.Unauthorized(),
+        OperationErrorType.BadRequest => Results.BadRequest(error),
         _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
     };
+}
+
+static bool TryGetUserId(ClaimsPrincipal user, out int userId)
+{
+    return Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
 }
 
 public partial class Program { }

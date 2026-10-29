@@ -17,15 +17,16 @@ namespace GameStore.Api.Data
             this.dbContext = dbContext;
         }
 
-        public async Task<Order> CreateOrder(int userId, List<OrderItem> orderItems)
+        public async Task<Order> CreateOrder(User user, decimal spentMoney, List<OrderItem> orderItems)
         {
             var order = new Order
             {
-                UserId = userId,
+                UserId = user.Id,
                 CreatedAt = DateTime.UtcNow,
                 Items = orderItems
             };
 
+            user.Balance -= spentMoney;
             dbContext.Orders.Add(order);
             await dbContext.SaveChangesAsync();
 
