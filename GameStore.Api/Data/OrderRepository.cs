@@ -36,7 +36,10 @@ namespace GameStore.Api.Data
         public async Task<List<Order>> GetOrders(int userId)
         {
             return await OrderWithItems
-                .Where(x => x.UserId == userId).ToListAsync();
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync();
         }
 
         public async Task<Order?> GetOrder(int orderId)

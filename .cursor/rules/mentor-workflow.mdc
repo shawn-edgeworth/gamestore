@@ -12,6 +12,8 @@ Canonical: `.ai/base-rule.md`. Roadmap: `Docs/plan.md`. Status: `Docs/progress.m
 - Learner writes the code and decides.
 - Agent mentors: explain, guide, answer questions.
 - Write or edit code only when the learner explicitly asks — except `Docs/progress.md` (agent updates it) and docs the learner requested.
+- **Frontend** (`wwwroot`) the agent may edit when the learner asks to change the site.
+- **Backend** (C#, EF, `Program.cs`, миграции, эндпоинты) the agent does **not** write. If a UI change needs an API or model change, explain it and give it as homework in the usual four-block format. Do not sneak backend edits into a frontend pass.
 
 ## How to explain
 

@@ -12,7 +12,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** ветка `feature/cart`. Backend корзины закрыт (чтение, add/patch/delete, checkout одним `SaveChanges`). Дальше — страница корзины в `wwwroot`. Алгоритмы параллельно. Тесты не углублять.
+**Фокус сейчас:** корзина закрыта. Витрина поправлена (навигация, список игр, qty stepper, JWT 7 дней). Дальше алгоритмы; Docker чуть позже. Тесты не углублять.
 
 ---
 
@@ -23,12 +23,12 @@
 | Стек | .NET 10, Minimal APIs, EF Core + Npgsql, PostgreSQL, FluentValidation, JWT, xUnit |
 | Решение | `GameStore.Api` + `GameStore.Api.Tests` |
 | Сущности | `Game`, `Category`, `User`, `Order`, `OrderItem`, `Cart`, `CartItem` |
-| Auth | регистрация, логин, JWT (HS256). Запись игр и категорий — роль `Admin`. Заказы, кошелёк, корзина — любой JWT |
+| Auth | регистрация, логин, JWT (HS256, **7 дней**). Запись игр и категорий — роль `Admin`. Заказы, кошелёк, корзина — любой JWT. Просроченный токен сбрасывается в шапке, не рисует «вход» |
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice` |
 | Wallet | `User.Balance` `numeric(12,2)` (`MoneyHelper` 12,2). `GET /users/me`, `POST /users/me/balance` (только пополнение) |
 | Cart | одна корзина на пользователя (уникальный `UserId`). Позиции: уникальные `CartId`+`GameId`. Игра удалена → Cascade строк корзины. Заказ↔игра Restrict |
 | README | есть: запуск, user-secrets, миграции, сценарии Swagger |
-| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк). Страницы корзины ещё нет |
+| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк, **корзина**) |
 | Docker | нет |
 | Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, сейчас **`feature/cart`** |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
@@ -113,14 +113,14 @@
 - [x] `DELETE /cart/items/{gameId}` (404 если нет корзины или позиции; каталог не трогаем)
 - [x] `PATCH /cart/items/{gameId}` (присвоение количества, не сумма)
 - [x] `POST /cart/checkout`: один `SaveChanges` (заказ, баланс, `cart.Items.Clear()`), пустая корзина → 400
+- [x] Витрина корзины: `wwwroot/cart.html`, ссылка в шапке, «В корзину» на карточке игры
 - [x] FK Restrict/Cascade, один тип на файл, неймспейсы по слоям
 - [x] README в корне
-- [x] Статическая витрина `wwwroot` (каталог, поиск, логин, заказы, админка, кошелёк)
+- [x] Статическая витрина `wwwroot` (каталог, поиск, логин, заказы, админка, кошелёк, корзина)
 - [x] SQL-практика: SELECT…LIMIT, JOIN, LEFT JOIN, GROUP BY/HAVING, подзапросы, EXISTS, CTE
 
 ### Известный техдолг (не забывать)
 
-- [ ] Нет страницы корзины в `wwwroot`; «Купить» на карточке игры всё ещё бьёт в `POST /orders`
 - [ ] В `GET /games` нет `totalCount` в ответе
 - [ ] В `OrderDetails` нет `Id`
 - [ ] `MoneyHelper` без неймспейса `GameStore.Api.*`
@@ -131,15 +131,13 @@
 
 ### Дальше по проекту (приоритет)
 
-1. Страница корзины на витрине (`wwwroot/cart.html` + ссылка в шапке)
-2. Страница корзины на витрине
-3. **Алгоритмы** 3–5 задач в неделю
-4. Docker Compose (PostgreSQL, опционально API)
-5. Мелочи API (`totalCount`, `OrderDetails.Id`) — по пути
+1. **Алгоритмы** 3–5 задач в неделю
+2. Docker Compose (PostgreSQL, опционально API)
+3. Мелочи API (`totalCount`, `OrderDetails.Id`) — по пути
 
 Полный roadmap: [`plan.md`](./plan.md).
 
-Этапы A, C, D, E и README закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, корзины на фронте ещё нет. H (Docker) открыт. I (алгоритмы) — параллельно.
+Этапы A, C, D, E и README закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, включая корзину. H (Docker) открыт. I (алгоритмы) — параллельно.
 
 ---
 
@@ -236,6 +234,8 @@
 - `DELETE /cart/items/{gameId}`: `Items.Remove` + `UpdateCart`, шапка остаётся. Нет корзины или позиции → 404, без запроса в каталог.
 - `PATCH /cart/items/{gameId}`: `Quantity =` из тела, не `+=`. Валидатор `> 0`. Нет позиции → 404, новую строку не создаёт.
 - `POST /cart/checkout`: общий Scoped `DbContext`, один `SaveChanges`. Пустая корзина → 400, не 404.
+- Витрина: `cart.html` (GET/PATCH/DELETE/checkout), ссылка в шапке, на карточке игры «В корзину» → `POST /cart/items`.
+- UI 2026-10-30: заказы `OrderByDescending(CreatedAt)`; JWT 7 дней + сброс просроченной сессии; «Все игры» вертикальный список, пейджер сверху и снизу; qty +/− на игре и в корзине; шапка «Главная» + «Все игры», корзина иконкой, заказы/выход в меню почты.
 
 ---
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Все игры — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css">
+    <link rel="stylesheet" href="/css/site.css?v=5">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -16,16 +16,13 @@
             <a href="#" data-size="25">25</a>
             <a href="#" data-size="50">50</a>
         </p>
+        <div class="pager" data-pager></div>
         <p id="status">Загрузка…</p>
-        <div id="games"></div>
-        <div class="pager">
-            <button type="button" id="prev">Назад</button>
-            <p id="page-label"></p>
-            <button type="button" id="next">Вперёд</button>
-        </div>
+        <div id="games" class="game-list" data-layout="list"></div>
+        <div class="pager" data-pager></div>
     </main>
-    <script src="/js/site.js"></script>
-    <script src="/js/layout.js"></script>
+    <script src="/js/site.js?v=5"></script>
+    <script src="/js/layout.js?v=5"></script>
     <script>
         mountHeader("games");
 
@@ -44,15 +41,35 @@
 
         const status = document.getElementById("status");
         const root = document.getElementById("games");
-        const prev = document.getElementById("prev");
-        const next = document.getElementById("next");
-        const pageLabel = document.getElementById("page-label");
 
         function goTo(nextPage, nextSize) {
             const query = new URLSearchParams();
             query.set("page", String(nextPage));
             query.set("pageSize", String(nextSize));
             window.location.search = query.toString();
+        }
+
+        function fillPagers(gameCount) {
+            for (const pager of document.querySelectorAll("[data-pager]")) {
+                pager.replaceChildren();
+
+                const prev = document.createElement("button");
+                prev.type = "button";
+                prev.textContent = "Назад";
+                prev.disabled = page <= 1;
+                prev.addEventListener("click", () => goTo(page - 1, pageSize));
+
+                const label = document.createElement("p");
+                label.textContent = "Страница " + page;
+
+                const next = document.createElement("button");
+                next.type = "button";
+                next.textContent = "Вперёд";
+                next.disabled = gameCount < pageSize;
+                next.addEventListener("click", () => goTo(page + 1, pageSize));
+
+                pager.append(prev, label, next);
+            }
         }
 
         for (const link of document.querySelectorAll("#page-sizes a")) {
@@ -67,16 +84,6 @@
             });
         }
 
-        prev.addEventListener("click", () => {
-            if (page > 1) {
-                goTo(page - 1, pageSize);
-            }
-        });
-
-        next.addEventListener("click", () => {
-            goTo(page + 1, pageSize);
-        });
-
         (async function () {
             try {
                 const games = await fetchGames({ page, pageSize });
@@ -87,16 +94,13 @@
                         : "На этой странице игр нет.";
                 } else {
                     status.textContent = "";
-                    renderGames(root, games);
+                    renderGames(root, games, "list");
                 }
 
-                pageLabel.textContent = "Страница " + page;
-                prev.disabled = page <= 1;
-                next.disabled = games.length < pageSize;
+                fillPagers(games.length);
             } catch (error) {
                 status.textContent = error.message;
-                prev.disabled = true;
-                next.disabled = true;
+                fillPagers(0);
             }
         })();
     </script>
