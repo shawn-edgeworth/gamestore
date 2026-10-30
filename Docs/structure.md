@@ -49,7 +49,7 @@
 | Деньги в БД | `GameDbContext` `HasPrecision`, миграции `AddUserBalance` / `*MoneyPrecision` |
 | Связи FK | `GameDbContext.OnModelCreating`: заказ↔игра **Restrict**, корзина↔игра **Cascade**, заказ→позиции **Cascade** |
 | Ошибки HTTP | `Services/GameOperationResult.cs` (`OperationResult<T>`), `OperationErrorType`, `ToHttpError` в `Program.cs` |
-| Витрина | `wwwroot/*.html` (`cart.html`, `game.html` «В корзину»), `wwwroot/js/{site,layout,admin}.js`, `wwwroot/css/site.css` |
+| Витрина | `wwwroot/*.html` (`cart.html`, `game.html` «В корзину», `orders.html` «Вернуть заказ»), `wwwroot/js/{site,layout,admin}.js`, `wwwroot/css/site.css` |
 
 ---
 

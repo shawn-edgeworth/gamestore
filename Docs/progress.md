@@ -12,7 +12,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** возврат в API закрыт. Дальше кнопка на `orders.html`. Алгоритмы параллельно; Docker чуть позже. Тесты не углублять.
+**Фокус сейчас:** возвраты закрыты (API + кнопка на заказах). Алгоритмы — отдельно, не в этом репо. В GameStore дальше Docker Compose. Тесты не углублять.
 
 ---
 
@@ -24,11 +24,11 @@
 | Решение | `GameStore.Api` + `GameStore.Api.Tests` |
 | Сущности | `Game`, `Category`, `User`, `Order`, `OrderItem`, `Cart`, `CartItem` |
 | Auth | регистрация, логин, JWT (HS256, **7 дней**). Запись игр и категорий — роль `Admin`. Заказы, кошелёк, корзина, возврат — любой JWT. Просроченный токен сбрасывается в шапке, не рисует «вход» |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice`. Статус: enum `OrderStatus` (`Paid = 0`, `Refunded = 1`). `POST /orders/{id}/refund`: полный возврат, сумма со снимка, один `SaveChanges` (баланс + статус), повтор → 400, чужой → 404. Витрины возврата ещё нет |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice`. Статус: enum `OrderStatus` (`Paid = 0`, `Refunded = 1`). `POST /orders/{id}/refund`: полный возврат, сумма со снимка, один `SaveChanges` (баланс + статус), повтор → 400, чужой → 404. Витрина: кнопка на `orders.html` |
 | Wallet | `User.Balance` `numeric(12,2)` (`MoneyHelper` 12,2). `GET /users/me`, `POST /users/me/balance` (только пополнение) |
 | Cart | одна корзина на пользователя (уникальный `UserId`). Позиции: уникальные `CartId`+`GameId`. Игра удалена → Cascade строк корзины. Заказ↔игра Restrict |
 | README | есть: запуск, user-secrets, миграции, сценарии Swagger |
-| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк, **корзина**) |
+| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк, корзина, **возврат на заказах**) |
 | Docker | нет |
 | Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, `feature/cart`, сейчас **`feature/refunds`** |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
@@ -121,6 +121,7 @@
 - [x] SQL-практика: SELECT…LIMIT, JOIN, LEFT JOIN, GROUP BY/HAVING, подзапросы, EXISTS, CTE
 - [x] `OrderStatus` на сущности и в DTO (`Paid` / `Refunded`); `OrderDetails.Id`; CreateOrder и Checkout ставят `Paid`
 - [x] `POST /orders/{id}/refund`: один `SaveChanges`, не `AddMoney`; `RequireAuthorization`
+- [x] Витрина возврата: `orders.html` — `Paid` → кнопка, `Refunded` → текст, после успеха обновляются список и баланс в шапке
 
 ### Известный техдолг (не забывать)
 
@@ -133,10 +134,9 @@
 
 ### Дальше по проекту (приоритет)
 
-1. **Витрина возврата** на `orders.html`
-2. **Алгоритмы** 3–5 задач в неделю
-3. Docker Compose (PostgreSQL, опционально API)
-4. Мелочи API (`totalCount`) — по пути
+1. **Docker Compose** (PostgreSQL, опционально API)
+2. Алгоритмы 3–5 задач в неделю — в отдельном чате, не в этом репо
+3. Мелочи API (`totalCount`) — по пути
 
 Полный roadmap: [`plan.md`](./plan.md).
 
@@ -253,6 +253,11 @@
 - `OrderRepository.Refund`: `Balance +=` и `OrderStatus = Refunded` в одном `SaveChanges`, без `AddMoney`.
 - `POST /orders/{id}/refund` → 200 и `ToResponse()`. `.RequireAuthorization()` как у соседних заказов.
 - Кнопки на витрине ещё нет.
+
+### 2026-10-30 — витрина возврата
+
+- `orders.html`: загрузка вынесена в `loadOrders`. `orderStatus === 0` → «Вернуть заказ», `=== 1` → «Возвращён» (ноль в JS ложный, голое `if` нельзя).
+- `POST /orders/{id}/refund` с JWT. 401 → логин. Ошибка → `readApiError` и перерисовка. Успех → список + `renderNav("orders")` (баланс в шапке). Кнопка `disabled` на время запроса.
 
 ---
 
