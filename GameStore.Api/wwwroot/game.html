@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Игра — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css">
+    <link rel="stylesheet" href="/css/site.css?v=5">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -13,8 +13,8 @@
         <p id="status">Загрузка…</p>
         <article id="detail" class="game-detail" hidden></article>
     </main>
-    <script src="/js/site.js"></script>
-    <script src="/js/layout.js"></script>
+    <script src="/js/site.js?v=5"></script>
+    <script src="/js/layout.js?v=5"></script>
     <script>
         mountHeader("games");
 
@@ -22,27 +22,85 @@
         const id = Number(params.get("id"));
         const status = document.getElementById("status");
         const detail = document.getElementById("detail");
+        const cartHost = document.createElement("div");
+        cartHost.className = "game-qty";
 
-        async function buy(gameId) {
+        async function renderCartControls(gameId) {
+            cartHost.replaceChildren();
+
             if (!isLoggedIn()) {
-                window.location.href = "/login.html?next=" + encodeURIComponent("/game.html?id=" + gameId);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = "В корзину";
+                button.addEventListener("click", () => {
+                    window.location.href = "/login.html?next="
+                        + encodeURIComponent("/game.html?id=" + gameId);
+                });
+                cartHost.append(button);
                 return;
             }
 
-            const response = await fetch("/orders", {
-                method: "POST",
-                headers: authHeaders(),
-                body: JSON.stringify({
-                    orderItems: [{ gameId, quantity: 1 }]
-                })
+            const cart = await fetchCart();
+            if (!cart) {
+                redirectToLogin();
+                return;
+            }
+
+            const item = (cart.cartItems ?? []).find((row) => row.gameId === gameId);
+
+            if (!item) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = "В корзину";
+                button.addEventListener("click", async () => {
+                    const response = await addCartItem(gameId, 1);
+                    if (response.status === 401) {
+                        redirectToLogin();
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        status.textContent = await readApiError(response);
+                        return;
+                    }
+
+                    status.textContent = "";
+                    await renderCartControls(gameId);
+                    await mountHeader("games");
+                });
+                cartHost.append(button);
+                return;
+            }
+
+            const stepper = createQtyStepper(item.quantity, {
+                onDelta: (delta) => changeQuantity(gameId, item.quantity + delta),
+                onSet: (value) => changeQuantity(gameId, value)
             });
+            cartHost.append(stepper);
+        }
+
+        async function changeQuantity(gameId, quantity) {
+            let response;
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                response = await deleteCartItem(gameId);
+            } else {
+                response = await setCartItemQuantity(gameId, quantity);
+            }
+
+            if (response.status === 401) {
+                redirectToLogin();
+                return;
+            }
 
             if (!response.ok) {
                 status.textContent = await readApiError(response);
+                await renderCartControls(gameId);
                 return;
             }
 
-            window.location.href = "/orders.html";
+            status.textContent = "";
+            await renderCartControls(gameId);
+            await mountHeader("games");
         }
 
         (async function () {
@@ -79,18 +137,15 @@
                 const description = document.createElement("p");
                 description.textContent = game.description ?? "";
 
-                const buyButton = document.createElement("button");
-                buyButton.type = "button";
-                buyButton.textContent = "Купить";
-                buyButton.addEventListener("click", () => buy(game.id));
-
                 detail.append(
                     createGameImage(game.imageUrl, game.name),
                     title,
                     meta,
                     description,
-                    buyButton
+                    cartHost
                 );
+
+                await renderCartControls(game.id);
             } catch (error) {
                 status.textContent = error.message;
             }

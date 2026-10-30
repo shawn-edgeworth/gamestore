@@ -69,6 +69,8 @@ builder.Services.AddScoped<UserService>();
 
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<CartRepository>();
+builder.Services.AddScoped<CartService>();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -344,6 +346,92 @@ app.MapPost("/users/me/balance", async (ClaimsPrincipal user, UserService userSe
     }
 
     return Results.Ok(result.Value.ToDetailsResponse());
+}).RequireAuthorization();
+
+app.MapGet("/cart", async (ClaimsPrincipal user, CartService cartService) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.GetCart(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPost("/cart/items", async (ClaimsPrincipal user, CartService cartService, AddCartItemRequest request) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.AddItem(userId, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapDelete("/cart/items/{gameId}", async (ClaimsPrincipal user, CartService cartService, int gameId) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.RemoveItem(userId, gameId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPatch("/cart/items/{gameId}", async (ClaimsPrincipal user,
+ CartService cartService, int gameId, UpdateCartItemRequest request) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.UpdateItem(userId, gameId, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPost("/cart/checkout", async (ClaimsPrincipal user, OrderService orderService) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await orderService.Checkout(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
 
 app.Run();

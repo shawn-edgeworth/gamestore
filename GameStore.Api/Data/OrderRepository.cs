@@ -36,13 +36,33 @@ namespace GameStore.Api.Data
         public async Task<List<Order>> GetOrders(int userId)
         {
             return await OrderWithItems
-                .Where(x => x.UserId == userId).ToListAsync();
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync();
         }
 
         public async Task<Order?> GetOrder(int orderId)
         {
             var order = await OrderWithItems
                 .FirstOrDefaultAsync(x => x.Id == orderId);
+            return order;
+        }
+
+        internal async Task<Order> Checkout(User user, Cart cart, decimal spentMoney, List<OrderItem> orderItems)
+        {
+             var order = new Order
+            {
+                UserId = user.Id,
+                CreatedAt = DateTime.UtcNow,
+                Items = orderItems
+            };
+
+            user.Balance -= spentMoney;
+            cart.Items.Clear();
+            dbContext.Orders.Add(order);
+            await dbContext.SaveChangesAsync();
+
             return order;
         }
     }

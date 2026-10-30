@@ -14,6 +14,7 @@ public class GameDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Order> Orders { get; set; }
+    public DbSet<Cart> Carts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,5 +57,34 @@ public class GameDbContext : DbContext
         modelBuilder.Entity<OrderItem>()
             .Property(orderItem => orderItem.UnitPrice)
             .HasPrecision(MoneyHelper.Precision, MoneyHelper.Scale);
+
+        modelBuilder.Entity<Cart>()
+            .HasOne(cart => cart.User)
+            .WithMany()
+            .HasForeignKey(cart => cart.UserId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired();
+
+        modelBuilder.Entity<Cart>()
+            .HasIndex(cart => cart.UserId)
+            .IsUnique();
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(cartItem => cartItem.Game)
+            .WithMany()
+            .HasForeignKey(cartItem => cartItem.GameId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired();
+
+        modelBuilder.Entity<CartItem>()
+            .HasIndex(cartItem => new { cartItem.CartId, cartItem.GameId })
+            .IsUnique();
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne<Cart>()
+            .WithMany(cartItem => cartItem.Items)
+            .HasForeignKey(item => item.CartId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired();
     }
 }

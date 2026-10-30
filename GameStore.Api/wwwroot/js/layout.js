@@ -4,11 +4,10 @@ function mountHeader(current) {
         return;
     }
 
-    const extraLinks = [];
+    header.style.position = "relative";
+    header.style.zIndex = "1000";
 
-    if (isLoggedIn() && !isAdmin()) {
-        extraLinks.push('<li><a href="/orders.html" data-nav="orders">Заказы</a></li>');
-    }
+    const extraLinks = [];
 
     if (isAdmin()) {
         extraLinks.push(`
@@ -27,12 +26,12 @@ function mountHeader(current) {
     header.innerHTML = `
         <nav>
             <ul>
-                <li><a href="/" data-nav="home"><strong>GameStore</strong></a></li>
+                <li><a href="/" data-nav="home"><strong>Главная</strong></a></li>
+                <li><a href="/games.html" data-nav="games">Все игры</a></li>
             </ul>
             <ul>
-                <li><a href="/games.html" data-nav="games">Все игры</a></li>
                 <li>
-                    <form action="/search.html" method="get">
+                    <form class="nav-search" action="/search.html" method="get">
                         <fieldset role="group">
                             <input type="search" name="search" placeholder="Поиск по имени" required>
                             <button type="submit">Найти</button>
@@ -40,7 +39,9 @@ function mountHeader(current) {
                     </form>
                 </li>
                 ${extraLinks.join("")}
-                <li id="nav-auth"></li>
+                <li id="nav-cart"></li>
+                <li id="nav-wallet"></li>
+                <li id="nav-account"></li>
             </ul>
         </nav>
     `;

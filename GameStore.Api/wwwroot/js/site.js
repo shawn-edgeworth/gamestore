@@ -11,6 +11,14 @@ const placeholderImage =
         ' font-family="sans-serif" font-size="14" fill="#666">Нет фото</text></svg>'
     );
 
+const cartIconSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+    'viewBox="0 0 24 24" aria-hidden="true">' +
+    '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>' +
+    '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>' +
+    "</svg>";
+
 function getToken() {
     return localStorage.getItem(tokenKey);
 }
@@ -27,8 +35,29 @@ function isAdmin() {
     return getRole() === "Admin";
 }
 
+function readTokenExpiry(token) {
+    try {
+        const payload = token.split(".")[1];
+        const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+        return typeof json.exp === "number" ? json.exp * 1000 : 0;
+    } catch {
+        return 0;
+    }
+}
+
 function isLoggedIn() {
-    return Boolean(getToken());
+    const token = getToken();
+    if (!token) {
+        return false;
+    }
+
+    const expiry = readTokenExpiry(token);
+    if (!expiry || Date.now() >= expiry) {
+        clearSession();
+        return false;
+    }
+
+    return true;
 }
 
 function saveSession(token, email, role) {
@@ -45,6 +74,14 @@ function clearSession() {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(emailKey);
     localStorage.removeItem(roleKey);
+}
+
+function currentPath() {
+    return window.location.pathname + window.location.search;
+}
+
+function redirectToLogin() {
+    window.location.href = "/login.html?next=" + encodeURIComponent(safeNextPath(currentPath()));
 }
 
 function authHeaders() {
@@ -76,9 +113,18 @@ function createGameImage(url, alt) {
     return img;
 }
 
-function renderGames(root, games) {
+function isCatalogListPage() {
+    const path = window.location.pathname.replace(/\\/g, "/");
+    return /\/(games|search)\.html$/i.test(path);
+}
+
+function renderGames(root, games, layout) {
+    const mode = layout === "list" || root.dataset.layout === "list" || isCatalogListPage()
+        ? "list"
+        : (layout || "grid");
     root.replaceChildren();
-    root.classList.add("game-grid");
+    root.classList.remove("game-grid", "game-list");
+    root.classList.add(mode === "list" ? "game-list" : "game-grid");
 
     for (const game of games) {
         const article = document.createElement("article");
@@ -95,7 +141,10 @@ function renderGames(root, games) {
         const category = game.categoryName ?? "Без категории";
         meta.textContent = category + " · " + formatMoney(game.price);
 
-        link.append(createGameImage(game.imageUrl, game.name), title, meta);
+        const text = document.createElement("div");
+        text.append(title, meta);
+
+        link.append(createGameImage(game.imageUrl, game.name), text);
         article.append(link);
         root.append(article);
     }
@@ -140,11 +189,91 @@ async function fetchCategories() {
 
 async function fetchCurrentUser() {
     const response = await fetch("/users/me", { headers: authHeaders() });
+    if (response.status === 401) {
+        clearSession();
+        return null;
+    }
+
     if (!response.ok) {
         throw new Error(await readApiError(response));
     }
 
     return await response.json();
+}
+
+async function fetchCart() {
+    const response = await fetch("/cart", { headers: authHeaders() });
+    if (response.status === 401) {
+        clearSession();
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error(await readApiError(response));
+    }
+
+    return await response.json();
+}
+
+async function addCartItem(gameId, quantity) {
+    return fetch("/cart/items", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ gameId, quantity })
+    });
+}
+
+async function setCartItemQuantity(gameId, quantity) {
+    return fetch("/cart/items/" + gameId, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ quantity })
+    });
+}
+
+async function deleteCartItem(gameId) {
+    return fetch("/cart/items/" + gameId, {
+        method: "DELETE",
+        headers: authHeaders()
+    });
+}
+
+function createQtyStepper(quantity, handlers) {
+    const wrap = document.createElement("div");
+    wrap.className = "qty-stepper";
+
+    const minus = document.createElement("button");
+    minus.type = "button";
+    minus.className = "outline qty-btn";
+    minus.textContent = "−";
+    minus.setAttribute("aria-label", "Уменьшить");
+    minus.addEventListener("click", () => handlers.onDelta(-1));
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "1";
+    input.step = "1";
+    input.value = String(quantity);
+    input.setAttribute("aria-label", "Количество");
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            handlers.onSet(Number(input.value));
+        }
+    });
+    input.addEventListener("change", () => {
+        handlers.onSet(Number(input.value));
+    });
+
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "outline qty-btn";
+    plus.textContent = "+";
+    plus.setAttribute("aria-label", "Увеличить");
+    plus.addEventListener("click", () => handlers.onDelta(1));
+
+    wrap.append(minus, input, plus);
+    return wrap;
 }
 
 async function readApiError(response) {
@@ -166,57 +295,105 @@ async function readApiError(response) {
     return raw;
 }
 
+function createCartLink(current) {
+    const link = document.createElement("a");
+    link.href = "/cart.html";
+    link.className = "nav-cart";
+    link.dataset.nav = "cart";
+    link.setAttribute("aria-label", "Корзина");
+    link.innerHTML = cartIconSvg;
+    if (current === "cart") {
+        link.setAttribute("aria-current", "page");
+    }
+
+    return link;
+}
+
 async function renderNav(current) {
-    const host = document.getElementById("nav-auth");
-    if (!host) {
+    const cartSlot = document.getElementById("nav-cart");
+    const walletSlot = document.getElementById("nav-wallet");
+    const accountSlot = document.getElementById("nav-account");
+    if (!accountSlot) {
         return;
     }
 
-    host.replaceChildren();
+    cartSlot?.replaceChildren();
+    walletSlot?.replaceChildren();
+    accountSlot.replaceChildren();
 
-    const email = getEmail();
-    const token = getToken();
-
-    if (token && email) {
-        host.className = "nav-auth";
-
-        const name = document.createElement("span");
-        name.textContent = email;
-
-        const wallet = document.createElement("a");
-        wallet.href = "/wallet.html";
-        wallet.textContent = formatMoney(0);
-        if (current === "wallet") {
-            wallet.setAttribute("aria-current", "page");
+    if (!isLoggedIn()) {
+        const login = document.createElement("a");
+        login.href = "/login.html";
+        login.textContent = "Вход";
+        if (current === "login") {
+            login.setAttribute("aria-current", "page");
         }
 
-        try {
-            const me = await fetchCurrentUser();
-            wallet.textContent = formatMoney(me.balance);
-        } catch {
-            wallet.textContent = "Кошелёк";
-        }
-
-        const logout = document.createElement("button");
-        logout.type = "button";
-        logout.textContent = "Выйти";
-        logout.addEventListener("click", () => {
-            clearSession();
-            window.location.href = "/";
-        });
-
-        host.append(name, wallet, logout);
+        accountSlot.append(login);
         return;
     }
 
-    const login = document.createElement("a");
-    login.href = "/login.html";
-    login.textContent = "Вход";
-    if (current === "login") {
-        login.setAttribute("aria-current", "page");
+    if (cartSlot) {
+        cartSlot.append(createCartLink(current));
     }
 
-    host.append(login);
+    const wallet = document.createElement("a");
+    wallet.href = "/wallet.html";
+    wallet.className = "nav-wallet";
+    wallet.textContent = formatMoney(0);
+    if (current === "wallet") {
+        wallet.setAttribute("aria-current", "page");
+    }
+
+    if (walletSlot) {
+        walletSlot.append(wallet);
+    }
+
+    try {
+        const me = await fetchCurrentUser();
+        if (!me) {
+            await renderNav(current);
+            return;
+        }
+
+        wallet.textContent = formatMoney(me.balance);
+    } catch {
+        wallet.textContent = "Кошелёк";
+    }
+
+    const menu = document.createElement("details");
+    menu.className = "dropdown";
+
+    const summary = document.createElement("summary");
+    summary.textContent = getEmail() ?? "Аккаунт";
+
+    const dropdown = document.createElement("ul");
+
+    const ordersItem = document.createElement("li");
+    const ordersLink = document.createElement("a");
+    ordersLink.href = "/orders.html";
+    ordersLink.dataset.nav = "orders";
+    ordersLink.textContent = "Заказы";
+    if (current === "orders") {
+        ordersLink.setAttribute("aria-current", "page");
+    }
+
+    ordersItem.append(ordersLink);
+
+    const logoutItem = document.createElement("li");
+    const logout = document.createElement("a");
+    logout.href = "#";
+    logout.textContent = "Выйти";
+    logout.addEventListener("click", (event) => {
+        event.preventDefault();
+        clearSession();
+        window.location.href = "/";
+    });
+    logoutItem.append(logout);
+
+    dropdown.append(ordersItem, logoutItem);
+    menu.append(summary, dropdown);
+    accountSlot.append(menu);
 }
 
 function markCurrentNav(current) {
@@ -230,7 +407,7 @@ function markCurrentNav(current) {
 
 function requireLogin() {
     if (!isLoggedIn()) {
-        window.location.href = "/login.html";
+        redirectToLogin();
         return false;
     }
 

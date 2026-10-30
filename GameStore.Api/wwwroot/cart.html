@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина — GameStore</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/css/site.css?v=5">
+</head>
+<body>
+    <header class="container" id="site-header"></header>
+    <main class="container">
+        <h1>Корзина</h1>
+        <p id="status">Загрузка…</p>
+        <div id="cart"></div>
+    </main>
+    <script src="/js/site.js?v=5"></script>
+    <script src="/js/layout.js?v=5"></script>
+    <script>
+        mountHeader("cart");
+
+        if (requireLogin()) {
+            const status = document.getElementById("status");
+            const root = document.getElementById("cart");
+
+            async function applyQuantity(gameId, quantity) {
+                if (!Number.isInteger(quantity) || quantity < 1) {
+                    await removeItem(gameId);
+                    return;
+                }
+
+                const response = await setCartItemQuantity(gameId, quantity);
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    await loadCart();
+                    return;
+                }
+
+                await loadCart();
+            }
+
+            async function removeItem(gameId) {
+                const response = await deleteCartItem(gameId);
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    return;
+                }
+
+                await loadCart();
+            }
+
+            async function loadCart() {
+                status.textContent = "Загрузка…";
+                root.replaceChildren();
+
+                const data = await fetchCart();
+                if (!data) {
+                    redirectToLogin();
+                    return;
+                }
+
+                const items = data.cartItems ?? [];
+
+                if (items.length === 0) {
+                    status.textContent = "Корзина пуста.";
+                    return;
+                }
+
+                status.textContent = "";
+                let total = 0;
+                const list = document.createElement("div");
+
+                for (const item of items) {
+                    const lineSum = Number(item.unitPrice) * Number(item.quantity);
+                    total += lineSum;
+
+                    const article = document.createElement("article");
+                    article.className = "cart-line";
+
+                    const text = document.createElement("div");
+                    const name = document.createElement("h2");
+                    name.textContent = item.gameName;
+                    const meta = document.createElement("p");
+                    meta.textContent = formatMoney(item.unitPrice) + " × " + item.quantity
+                        + " = " + formatMoney(lineSum);
+                    text.append(name, meta);
+
+                    const stepper = createQtyStepper(item.quantity, {
+                        onDelta: (delta) => applyQuantity(item.gameId, item.quantity + delta),
+                        onSet: (value) => applyQuantity(item.gameId, value)
+                    });
+
+                    const remove = document.createElement("button");
+                    remove.type = "button";
+                    remove.textContent = "Удалить";
+                    remove.className = "secondary";
+                    remove.addEventListener("click", () => removeItem(item.gameId));
+
+                    const actions = document.createElement("div");
+                    actions.className = "cart-actions";
+                    actions.append(stepper, remove);
+
+                    article.append(
+                        createGameImage(item.gameImageUrl, item.gameName),
+                        text,
+                        actions
+                    );
+                    list.append(article);
+                }
+
+                const sum = document.createElement("p");
+                sum.textContent = "Итого: " + formatMoney(total);
+
+                const checkout = document.createElement("button");
+                checkout.type = "button";
+                checkout.textContent = "Оформить заказ";
+                checkout.addEventListener("click", checkoutCart);
+
+                root.append(list, sum, checkout);
+            }
+
+            async function checkoutCart() {
+                status.textContent = "";
+                const response = await fetch("/cart/checkout", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    return;
+                }
+
+                window.location.href = "/orders.html";
+            }
+
+            loadCart().catch((error) => {
+                status.textContent = error.message;
+            });
+        }
+    </script>
+</body>
+</html>
