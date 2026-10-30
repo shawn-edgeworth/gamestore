@@ -5,8 +5,9 @@ namespace GameStore.Api.Models
         public int Id { get; set; }
         public int UserId { get; set; }
         public DateTime CreatedAt { get; set; }
-        public List<OrderItem> Items { get; set; } = [];
+        public OrderStatus OrderStatus { get; set; }
 
+        public List<OrderItem> Items { get; set; } = [];
         public User User { get; set; } = null!;
     }
 }

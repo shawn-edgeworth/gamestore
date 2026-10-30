@@ -146,7 +146,46 @@ namespace GameStore.Api.Services
                    OperationErrorType.BadRequest);
             }
 
-            var order = await orderRepository.Checkout(user,cart, totalPrice, orderItems);
+            var order = await orderRepository.Checkout(user, cart, totalPrice, orderItems);
+            return OperationResult<Order>.Success(order);
+        }
+
+        public async Task<OperationResult<Order>> Refund(int userId, int id)
+        {
+            var order = await orderRepository.GetOrder(id);
+            if (order is null)
+            {
+                return OperationResult<Order>.Failure("Order is not found.",
+                    OperationErrorType.NotFound);
+            }
+
+            if (order.UserId != userId)
+            {
+                return OperationResult<Order>.Failure("No access to that order from this user.",
+                    OperationErrorType.NotFound);
+            }
+
+            if (order.OrderStatus is OrderStatus.Refunded)
+            {
+                return OperationResult<Order>.Failure("Order was refunded already.",
+                   OperationErrorType.BadRequest);
+            }
+
+            var user = await userRepository.GetUserById(userId);
+            if (user is null)
+            {
+                return OperationResult<Order>.Failure("User is not found.",
+                    OperationErrorType.NotFound);
+            }
+            
+            var totalPrice = 0m;
+            foreach(var item in order.Items)
+            {
+                totalPrice+= item.UnitPrice*item.Quantity;
+            }
+
+            order = await orderRepository.Refund(user,totalPrice,order);
+
             return OperationResult<Order>.Success(order);
         }
     }

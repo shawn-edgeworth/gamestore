@@ -23,7 +23,8 @@ namespace GameStore.Api.Data
             {
                 UserId = user.Id,
                 CreatedAt = DateTime.UtcNow,
-                Items = orderItems
+                Items = orderItems,
+                OrderStatus = OrderStatus.Paid
             };
 
             user.Balance -= spentMoney;
@@ -51,16 +52,26 @@ namespace GameStore.Api.Data
 
         internal async Task<Order> Checkout(User user, Cart cart, decimal spentMoney, List<OrderItem> orderItems)
         {
-             var order = new Order
+            var order = new Order
             {
                 UserId = user.Id,
                 CreatedAt = DateTime.UtcNow,
-                Items = orderItems
+                Items = orderItems,
+                OrderStatus = OrderStatus.Paid
             };
 
             user.Balance -= spentMoney;
             cart.Items.Clear();
             dbContext.Orders.Add(order);
+            await dbContext.SaveChangesAsync();
+
+            return order;
+        }
+
+        public async Task<Order> Refund(User user, decimal totalPrice, Order order)
+        {
+            user.Balance += totalPrice;
+            order.OrderStatus = OrderStatus.Refunded;
             await dbContext.SaveChangesAsync();
 
             return order;

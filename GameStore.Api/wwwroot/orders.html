@@ -19,15 +19,41 @@
     <script>
         mountHeader("orders");
 
-        (async function () {
-            if (!requireLogin()) {
-                return;
-            }
-
+        if (requireLogin()) {
             const status = document.getElementById("status");
             const root = document.getElementById("orders");
+            const paidStatus = 0;
+            const refundedStatus = 1;
 
-            try {
+            async function refundOrder(orderId, button) {
+                status.textContent = "";
+                button.disabled = true;
+
+                const response = await fetch("/orders/" + orderId + "/refund", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
+
+                if (!response.ok) {
+                    status.textContent = await readApiError(response);
+                    button.disabled = false;
+                    await loadOrders();
+                    return;
+                }
+
+                await loadOrders();
+                await renderNav("orders");
+            }
+
+            async function loadOrders() {
+                status.textContent = "Загрузка…";
+                root.replaceChildren();
+
                 const response = await fetch("/orders", { headers: authHeaders() });
                 if (response.status === 401) {
                     redirectToLogin();
@@ -48,7 +74,6 @@
                 }
 
                 status.textContent = "";
-                root.replaceChildren();
 
                 for (const order of orders) {
                     const article = document.createElement("article");
@@ -73,12 +98,27 @@
                     sum.textContent = "Итого: " + formatMoney(total);
 
                     article.append(heading, list, sum);
+
+                    if (order.orderStatus === paidStatus) {
+                        const refund = document.createElement("button");
+                        refund.type = "button";
+                        refund.textContent = "Вернуть заказ";
+                        refund.addEventListener("click", () => refundOrder(order.id, refund));
+                        article.append(refund);
+                    } else if (order.orderStatus === refundedStatus) {
+                        const note = document.createElement("p");
+                        note.textContent = "Возвращён";
+                        article.append(note);
+                    }
+
                     root.append(article);
                 }
-            } catch (error) {
-                status.textContent = error.message;
             }
-        })();
+
+            loadOrders().catch((error) => {
+                status.textContent = error.message;
+            });
+        }
     </script>
 </body>
 </html>
