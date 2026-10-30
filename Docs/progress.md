@@ -1,7 +1,8 @@
 # GameStore — прогресс обучения
 
-> Живой файл. Обновляем после каждого учебного блока или заметного изменения в коде.
-> Последнее обновление: **2026-10-28**
+> Живой файл. Агент обновляет после закрытого шага. Последнее обновление: **2026-10-30**
+
+Карта файлов: [`structure.md`](./structure.md). Roadmap: [`plan.md`](./plan.md).
 
 ---
 
@@ -11,7 +12,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** backend закрыт по MVP. Дальше алгоритмы и git-ветки; по желанию одна статическая страница из `wwwroot` (не React/MVC). Тесты не углублять. SQL поддерживать короткими запросами, не новым курсом.
+**Фокус сейчас:** ветка `feature/cart`. Backend корзины закрыт (чтение, add/patch/delete, checkout одним `SaveChanges`). Дальше — страница корзины в `wwwroot`. Алгоритмы параллельно. Тесты не углублять.
 
 ---
 
@@ -21,12 +22,15 @@
 | --- | --- |
 | Стек | .NET 10, Minimal APIs, EF Core + Npgsql, PostgreSQL, FluentValidation, JWT, xUnit |
 | Решение | `GameStore.Api` + `GameStore.Api.Tests` |
-| Сущности | `Game`, `Category`, `User`, `Order`, `OrderItem` |
-| Auth | регистрация, логин, JWT (HS256). Запись игр и категорий — роль `Admin`. Заказы — любой JWT |
-| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Один `SaveChanges` = одна транзакция |
-| README | есть (`README.md` в корне): запуск, user-secrets, миграции, сценарии Swagger |
-| Frontend / Docker | нет |
-| Git | репозиторий, `.gitignore`, коммиты, remote `origin` на `master`; ветки `feature/...` ещё слабо |
+| Сущности | `Game`, `Category`, `User`, `Order`, `OrderItem`, `Cart`, `CartItem` |
+| Auth | регистрация, логин, JWT (HS256). Запись игр и категорий — роль `Admin`. Заказы, кошелёк, корзина — любой JWT |
+| Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice` |
+| Wallet | `User.Balance` `numeric(12,2)` (`MoneyHelper` 12,2). `GET /users/me`, `POST /users/me/balance` (только пополнение) |
+| Cart | одна корзина на пользователя (уникальный `UserId`). Позиции: уникальные `CartId`+`GameId`. Игра удалена → Cascade строк корзины. Заказ↔игра Restrict |
+| README | есть: запуск, user-secrets, миграции, сценарии Swagger |
+| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк). Страницы корзины ещё нет |
+| Docker | нет |
+| Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, сейчас **`feature/cart`** |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
 
 Эндпоинты (префикса `/api` нет):
@@ -47,9 +51,16 @@
 | DELETE | `/categories/{id}` | Admin | ✅ Restrict, если есть игры |
 | POST | `/register` | нет | ✅ |
 | POST | `/login` | нет | ✅ JWT, поле `Token` |
-| POST | `/orders` | JWT | ✅ |
-| GET | `/orders` | JWT | ✅ свои заказы, `GameName` |
+| GET | `/users/me` | JWT | ✅ профиль и баланс |
+| POST | `/users/me/balance` | JWT | ✅ пополнение |
+| POST | `/orders` | JWT | ✅ списание баланса, снимок имени и цены |
+| GET | `/orders` | JWT | ✅ свои заказы, `GameName` из колонки |
 | GET | `/orders/{id}` | JWT | ✅ свой → 200, чужой → 404, без токена → 401 |
+| GET | `/cart` | JWT | ✅ нет строки → 200 и пустой `cartItems`, без INSERT |
+| POST | `/cart/items` | JWT | ✅ get-or-create, та же игра → `Quantity +=` |
+| DELETE | `/cart/items/{gameId}` | JWT | ✅ нет корзины/позиции → 404; шапка `"Carts"` остаётся |
+| PATCH | `/cart/items/{gameId}` | JWT | ✅ ставит `Quantity`, не прибавляет; нет позиции → 404 |
+| POST | `/cart/checkout` | JWT | ✅ заказ + списание + очистка `CartItem` в одном `SaveChanges`; пустая корзина → 400 |
 
 ---
 
@@ -60,18 +71,18 @@
 | Тема | Сейчас | Цель к экзамену | Где закрепляем |
 | --- | --- | --- | --- |
 | C# основы | + | ✓ | весь проект |
-| Коллекции / LINQ | + | ✓ | фильтры игр, мапперы, `Where`/`Skip`/`Take`/`ILike` |
+| Коллекции / LINQ | + | ✓ | фильтры игр, мапперы, `Where`/`Skip`/`Take`/`ILike`, поиск позиции корзины |
 | async/await | ~ | ✓ | сервисы, EF `*Async` |
 | DI / lifetimes | + | ✓ | `Program.cs`, Scoped сервисы и DbContext |
-| ASP.NET Core (pipeline, Minimal API) | + | ✓ | эндпоинты, JWT, 401/403, Swagger |
-| EF Core / миграции | + | ✓ | Include/ThenInclude, FK, Restrict/Cascade, один SaveChanges |
-| SQL | + | ~ / + | DBeaver до CTE; индексы отдельно, если понадобятся |
-| DTO / Entity / маппинг | + | ✓ | Models + Mappers |
+| ASP.NET Core (pipeline, Minimal API) | + | ✓ | эндпоинты, JWT, 401/403, Swagger, статика |
+| EF Core / миграции | + | ✓ | Include, FK Restrict/Cascade, уникальные индексы, identity `Id == 0`, сырой `Sql` в миграции |
+| SQL | + | ~ / + | DBeaver до CTE; уникальный индекс на корзине уже в модели |
+| DTO / Entity / маппинг | + | ✓ | снимок чека vs живой каталог в корзине |
 | Валидация | + | ✓ | FluentValidation + `OperationResult` |
 | Тесты (unit + integration) | ~ | ✓ | каркас есть; не приоритет |
-| Git (checkout/commit/push/pull) | + | ✓ | коммиты и remote есть; ветки ещё слабо |
+| Git (checkout/commit/push/pull) | + | ✓ | ветки `feature/frontend`, `feature/wallet`, `feature/cart` |
 | Алгоритмы | ~ | ✓ | отдельно, 3–5 задач/неделя |
-| Auth (JWT) | + | ~ / ✓ | login/register, Admin, свои заказы |
+| Auth (JWT) | + | ~ / ✓ | login/register, Admin, свои заказы/корзина/кошелёк |
 | Docker | — | ~ | ближе к финалу |
 
 ---
@@ -81,8 +92,8 @@
 ### Сделано
 
 - [x] Каркас ASP.NET Core + PostgreSQL + connection string
-- [x] EF Core: `GameDbContext`, сущности каталога, пользователей и заказов
-- [x] Миграции до Users, Orders и Restrict/Cascade FK
+- [x] EF Core: `GameDbContext`, сущности каталога, пользователей, заказов, корзины
+- [x] Миграции до Users, Orders, Balance/precision, Cart + `OrderItem.GameName` (backfill SQL)
 - [x] CRUD игр + PATCH цены и категории
 - [x] Category: list/get/create/update/delete
 - [x] Id и Category в response DTO, `Include(Category)`
@@ -91,35 +102,44 @@
 - [x] Фильтры `GET /games`: categoryId, цена, search (`ILike`), page/pageSize
 - [x] OpenAPI + Swagger UI; кнопка Authorize (Swashbuckle bearer)
 - [x] `.gitignore`, `Jwt:Key` в user-secrets
-- [x] Git-коммиты и remote
+- [x] Git-коммиты, remote, ветки `feature/...`
 - [x] Users: регистрация, хеш пароля, логин, JWT
 - [x] Роль Admin на все записи игр и категорий; GET каталога публичный
-- [x] Orders: create/list/get by id (владелец / 404); один `SaveChangesAsync`
+- [x] Orders: create/list/get by id (владелец / 404); один `SaveChangesAsync`; списание баланса
+- [x] Снимок `GameName` на `OrderItem`; маппер читает колонку, не `Game.Name`
+- [x] Кошелёк: пополнение `POST /users/me/balance`, `GET /users/me`, `numeric(12,2)`
+- [x] Корзина в БД: уникальный `UserId`, уникальные `CartId`+`GameId`, Cascade при удалении игры
+- [x] `GET /cart`, `POST /cart/items` (get-or-create, без ручного `Id = -1`)
+- [x] `DELETE /cart/items/{gameId}` (404 если нет корзины или позиции; каталог не трогаем)
+- [x] `PATCH /cart/items/{gameId}` (присвоение количества, не сумма)
+- [x] `POST /cart/checkout`: один `SaveChanges` (заказ, баланс, `cart.Items.Clear()`), пустая корзина → 400
 - [x] FK Restrict/Cascade, один тип на файл, неймспейсы по слоям
-- [x] README в корне (запуск, секреты, миграции, сценарии Swagger)
+- [x] README в корне
+- [x] Статическая витрина `wwwroot` (каталог, поиск, логин, заказы, админка, кошелёк)
 - [x] SQL-практика: SELECT…LIMIT, JOIN, LEFT JOIN, GROUP BY/HAVING, подзапросы, EXISTS, CTE
 
 ### Известный техдолг (не забывать)
 
+- [ ] Нет страницы корзины в `wwwroot`; «Купить» на карточке игры всё ещё бьёт в `POST /orders`
 - [ ] В `GET /games` нет `totalCount` в ответе
 - [ ] В `OrderDetails` нет `Id`
+- [ ] `MoneyHelper` без неймспейса `GameStore.Api.*`
 - [ ] `GameValidatorTests` устарели; integration-тесты не доведены — не чинить в приоритете
 - [ ] CS8604 в `JwtTokenService`: `Jwt:Key` теоретически null (в `Program.cs` уже есть throw)
-- [ ] Нет Docker Compose и нет витрины (`wwwroot`)
-- [ ] SQL-индексы не разбирали (явный `BeginTransaction` не нужен)
+- [ ] Нет Docker Compose
+- [ ] SQL-индексы как тема разбора (на корзине уникальные уже есть)
 
 ### Дальше по проекту (приоритет)
 
-1. **Алгоритмы** 3–5 задач в неделю (массивы, строки, словари, два указателя)
-2. **Git-ветки** `feature/...` на следующую маленькую фичу
-3. По желанию: одна статическая страница в `wwwroot` + `fetch` + CSS с CDN (не React, не MVC)
+1. Страница корзины на витрине (`wwwroot/cart.html` + ссылка в шапке)
+2. Страница корзины на витрине
+3. **Алгоритмы** 3–5 задач в неделю
 4. Docker Compose (PostgreSQL, опционально API)
-5. SQL: короткий запрос по своей БД время от времени
-6. Мелочи API (`totalCount`, `OrderDetails.Id`) — только если останется время
+5. Мелочи API (`totalCount`, `OrderDetails.Id`) — по пути
 
 Полный roadmap: [`plan.md`](./plan.md).
 
-Этапы A, C, D, E (обязательное) и README закрыты. SQL (B) по запросам закрыт. G (витрина) и H (Docker) по желанию. I (алгоритмы, ветки, рассказ о проекте) — основной фокус к отбору.
+Этапы A, C, D, E и README закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, корзины на фронте ещё нет. H (Docker) открыт. I (алгоритмы) — параллельно.
 
 ---
 
@@ -127,7 +147,7 @@
 
 ### A. GameStore (основной)
 
-Идём по этапам в `plan.md`. После каждого этапа обновляем чеклист выше.
+Идём по этапам в `plan.md`. После каждого этапа агент обновляет чеклист выше.
 
 ### B. SQL (поддерживать, не курс заново)
 
@@ -139,7 +159,7 @@
 | 4 | NULL / IS NULL, COALESCE, CASE | ✅ |
 | 5 | IN, EXISTS / NOT EXISTS, скалярный подзапрос | ✅ |
 | 6 | CTE | ✅ |
-| 6b | Индексы | ☐ |
+| 6b | Индексы | ~ уникальные на корзине в модели; разбор «зачем индекс» ещё можно |
 | 6c | Транзакция заказа через один `SaveChanges` | ✅ (явный `BeginTransaction` не делали) |
 
 ### C. Алгоритмы (для отбора)
@@ -155,7 +175,7 @@
 | Навык | Статус |
 | --- | --- |
 | status / add / commit | ✅ на этом репо |
-| branch / checkout / merge | ☐ практика на следующей фиче |
+| branch / checkout / merge | ✅ ветки `feature/frontend`, `feature/wallet`, `feature/cart` |
 | push / pull / remote | ✅ `origin/master` |
 | осмысленные сообщения коммитов | ~ есть, держать короткие «зачем» |
 
@@ -196,13 +216,32 @@
 - Admin на PUT/DELETE/PATCH игр и на запись категорий; GET каталога публичный.
 - Аутентификация = кто ты (401); авторизация = можно ли (403 или 404 на чужой заказ).
 - README: запуск, user-secrets, миграции, сценарии Swagger без curl как основного пути.
-- Дальше: алгоритмы; витрина только как статика из того же API, если захочется демо.
+
+### 2026-10-28…29 — витрина и кошелёк
+
+- Статика `wwwroot`: каталог, поиск, логин, карточка игры, заказы, админка, кошелёк.
+- `User.Balance`, пополнение, `numeric(12,2)`, списание при `POST /orders`.
+- Ветки `feature/frontend`, `feature/wallet`.
+
+### 2026-10-29 — корзина
+
+- `Cart` + `CartItem`, уникальные индексы, Cascade на игру в корзине, Restrict на заказ.
+- `OrderItem.GameName` + `UPDATE` в миграции `AddCartAndOrderName`.
+- `GET /cart` (пустая → 200), `POST /cart/items` (get-or-create).
+- `Id = -1` ломает identity: EF вставляет явный ключ, второй POST бьёт в `PK_Carts`. Новая шапка только с `UserId`, `Add` при `Id == 0`.
+- Карта репо: `Docs/structure.md`. Прогресс дальше ведёт агент.
+
+### 2026-10-30 — удаление и PATCH корзины
+
+- `DELETE /cart/items/{gameId}`: `Items.Remove` + `UpdateCart`, шапка остаётся. Нет корзины или позиции → 404, без запроса в каталог.
+- `PATCH /cart/items/{gameId}`: `Quantity =` из тела, не `+=`. Валидатор `> 0`. Нет позиции → 404, новую строку не создаёт.
+- `POST /cart/checkout`: общий Scoped `DbContext`, один `SaveChanges`. Пустая корзина → 400, не 404.
 
 ---
 
 ## Как обновлять этот файл
 
-1. После кода — отметить чеклист «Сделано» / техдолг.
-2. После учебы без кода — строка в «Лог сессий» + матрица навыков.
+1. Агент после закрытого шага правит чеклист, снимок, таблицу эндпоинтов, техдолг и лог.
+2. Ученик поправляет, только если факт неверный.
 3. Не раздувать: факты и следующий шаг важнее длинных конспектов.
-4. Детальный план этапов держим в `plan.md`; здесь — **статус**.
+4. Детальный план этапов — в `plan.md`; карта файлов — в `structure.md`; здесь — **статус**.

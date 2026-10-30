@@ -45,5 +45,22 @@ namespace GameStore.Api.Data
                 .FirstOrDefaultAsync(x => x.Id == orderId);
             return order;
         }
+
+        internal async Task<Order> Checkout(User user, Cart cart, decimal spentMoney, List<OrderItem> orderItems)
+        {
+             var order = new Order
+            {
+                UserId = user.Id,
+                CreatedAt = DateTime.UtcNow,
+                Items = orderItems
+            };
+
+            user.Balance -= spentMoney;
+            cart.Items.Clear();
+            dbContext.Orders.Add(order);
+            await dbContext.SaveChangesAsync();
+
+            return order;
+        }
     }
 }

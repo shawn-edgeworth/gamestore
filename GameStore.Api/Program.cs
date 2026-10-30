@@ -382,6 +382,58 @@ app.MapPost("/cart/items", async (ClaimsPrincipal user, CartService cartService,
     return Results.Ok(result.Value.ToCollectionResponse());
 }).RequireAuthorization();
 
+app.MapDelete("/cart/items/{gameId}", async (ClaimsPrincipal user, CartService cartService, int gameId) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.RemoveItem(userId, gameId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPatch("/cart/items/{gameId}", async (ClaimsPrincipal user,
+ CartService cartService, int gameId, UpdateCartItemRequest request) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await cartService.UpdateItem(userId, gameId, request);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToCollectionResponse());
+}).RequireAuthorization();
+
+app.MapPost("/cart/checkout", async (ClaimsPrincipal user, OrderService orderService) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await orderService.Checkout(userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
+}).RequireAuthorization();
+
 app.Run();
 
 static IResult ToHttpError(OperationErrorType errorType, string? error)
