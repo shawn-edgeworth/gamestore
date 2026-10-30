@@ -44,7 +44,7 @@
 | Каталог игр | `Models/Game/*`, `GameService`, `GameRepository`, `GameMapper`, фильтр `GameQuery` |
 | Категории | `Models/Category/*`, `CategoryService`, `CategoryRepository` |
 | Пользователи, JWT, кошелёк | `Models/User/*`, `UserService`, `UserRepository`, `JwtTokenService`. Баланс: `GET /users/me`, `POST /users/me/balance`, списание в `OrderRepository.CreateOrder` |
-| Заказы | `Models/Order/*`, `OrderService`, `OrderRepository`, `OrderMapper`. Чек: снимок `OrderItem.GameName` + `UnitPrice`, не живой `Game.Name` |
+| Заказы | `Models/Order/*` (`OrderStatus` Paid/Refunded), `OrderService`, `OrderRepository`, `OrderMapper`. Чек: снимок `OrderItem.GameName` + `UnitPrice`, не живой `Game.Name`. JSON-поле статуса: `orderStatus` |
 | Корзина | `Models/Cart/*`, `CartService`, `CartRepository`, `CartMapper`. Черновик: имя/цена с `Game`. Одна корзина на `UserId` (уникальный индекс) |
 | Деньги в БД | `GameDbContext` `HasPrecision`, миграции `AddUserBalance` / `*MoneyPrecision` |
 | Связи FK | `GameDbContext.OnModelCreating`: заказ↔игра **Restrict**, корзина↔игра **Cascade**, заказ→позиции **Cascade** |
@@ -56,9 +56,11 @@
 ## Инварианты (не ломать)
 
 - JWT: issuer `GameStore`, audience `GameStore.Api`, claim пользователя — `ClaimTypes.NameIdentifier`.
-- Каталог GET публичный; запись игр/категорий — роль `Admin`; заказы, кошелёк, корзина — любой валидный JWT.
+- Каталог GET публичный; запись игр/категорий — роль `Admin`; заказы, кошелёк, корзина, возврат — любой валидный JWT.
 - Чужой заказ → **404**, не 403.
-- Один `SaveChangesAsync` на одну бизнес-операцию (заказ, пополнение, правка корзины).
+- Новый заказ: `OrderStatus = Paid`. Колонка `"OrderStatus"` — int, старые строки после миграции `0`.
+- Возврат: полный, сумма со снимка `OrderItem`, повтор → **400**, не второй плюс к балансу. Заказ не удалять, корзину не заполнять.
+- Один `SaveChangesAsync` на одну бизнес-операцию (заказ, пополнение, правка корзины, возврат).
 - `GET /cart` не делает `INSERT`. Нет строки `"Carts"` → 200 и пустой список позиций.
 - Новая корзина: `new Cart { UserId = userId }`, **`Id` не задавать** (0 = identity). `Carts.Add` только если `cart.Id == 0`.
 - Повтор той же игры в корзине: `Quantity +=`, не вторая строка (`CartId` + `GameId` уникальны).
@@ -75,7 +77,8 @@
 | CRUD + PATCH | `/games`, `/categories` | `GameService`, `CategoryService` |
 | POST | `/register`, `/login` | `UserService` |
 | GET/POST | `/users/me`, `/users/me/balance` | `UserService` |
-| POST/GET | `/orders`, `/orders/{id}` | `OrderService` |
+| POST/GET | `/orders`, `/orders/{id}` | `OrderService`. Список и деталка отдают `id` и `orderStatus` |
+| POST | `/orders/{id}/refund` | `OrderService.Refund` → `OrderRepository.Refund` |
 | GET | `/cart` | `CartService.GetCart` |
 | POST | `/cart/items` | `CartService.AddItem` |
 | DELETE | `/cart/items/{gameId}` | `CartService.RemoveItem` |

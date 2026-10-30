@@ -264,7 +264,7 @@ app.MapPost("/login", async (UserService userService, UserLoginRequest request) 
 
 app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, CreateOrderRequest request) =>
 {
-    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+    if (!TryGetUserId(user, out var userId))
     {
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
@@ -281,7 +281,7 @@ app.MapPost("/orders", async (OrderService orderService, ClaimsPrincipal user, C
 
 app.MapGet("/orders", async (OrderService orderService, ClaimsPrincipal user) =>
 {
-    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+    if (!TryGetUserId(user, out var userId))
     {
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
@@ -298,12 +298,29 @@ app.MapGet("/orders", async (OrderService orderService, ClaimsPrincipal user) =>
 
 app.MapGet("/orders/{id}", async (int id, OrderService orderService, ClaimsPrincipal user) =>
 {
-    if (!Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+   if (!TryGetUserId(user, out var userId))
     {
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
 
     var result = await orderService.GetOrder(id, userId);
+
+    if (!result.IsSuccess)
+    {
+        return ToHttpError(result.ErrorType, result.Error);
+    }
+
+    return Results.Ok(result.Value.ToResponse());
+}).RequireAuthorization();
+
+app.MapPost("/orders/{id}/refund", async (int id, OrderService orderService, ClaimsPrincipal user) =>
+{
+    if (!TryGetUserId(user, out var userId))
+    {
+        return ToHttpError(OperationErrorType.Authorization, "User is not found.");
+    }
+
+    var result = await orderService.Refund(userId,id);
 
     if (!result.IsSuccess)
     {

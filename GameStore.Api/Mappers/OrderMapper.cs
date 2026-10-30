@@ -18,6 +18,7 @@ public static class OrderMapper
         return new CreateOrderResponse
         {
             Id = order.Id,
+            OrderStatus = order.OrderStatus,
             CreatedAt = order.CreatedAt,
             Items = order.Items.Select(x => x.ToDetails()).ToList()
         };
@@ -38,6 +39,8 @@ public static class OrderMapper
     {
         return new OrderDetails
         {
+            Id = order.Id,
+            OrderStatus = order.OrderStatus,
             CreatedAt = order.CreatedAt,
             Items = order.Items.Select(x=>x.ToDetails()).ToList()
         };
