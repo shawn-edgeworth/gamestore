@@ -59,6 +59,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<GameRepository>();
 builder.Services.AddScoped<GameService>();
@@ -298,7 +299,7 @@ app.MapGet("/orders", async (OrderService orderService, ClaimsPrincipal user) =>
 
 app.MapGet("/orders/{id}", async (int id, OrderService orderService, ClaimsPrincipal user) =>
 {
-   if (!TryGetUserId(user, out var userId))
+    if (!TryGetUserId(user, out var userId))
     {
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
@@ -320,7 +321,7 @@ app.MapPost("/orders/{id}/refund", async (int id, OrderService orderService, Cla
         return ToHttpError(OperationErrorType.Authorization, "User is not found.");
     }
 
-    var result = await orderService.Refund(userId,id);
+    var result = await orderService.Refund(userId, id);
 
     if (!result.IsSuccess)
     {
@@ -450,6 +451,17 @@ app.MapPost("/cart/checkout", async (ClaimsPrincipal user, OrderService orderSer
 
     return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
+
+app.MapGet("/steam/appdetails", async (IHttpClientFactory httpClientFactory, int appids) =>
+{
+    var httpClient = httpClientFactory.CreateClient();
+    var response = await httpClient.GetAsync($"https://store.steampowered.com/api/appdetails?appids={appids}&cc=us&l=english");
+    if (response.StatusCode is not System.Net.HttpStatusCode.OK)
+    {
+        return Results.Problem(statusCode: (int)response.StatusCode);
+    }
+    return Results.Ok(response.Content);
+}).RequireAuthorization(policy => policy.RequireRole("Admin")); ;
 
 app.Run();
 

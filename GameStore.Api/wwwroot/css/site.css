@@ -162,6 +162,15 @@ nav fieldset {
     background: #e7e7e7;
 }
 
+.steam-import {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.steam-import fieldset[role="group"] {
+    margin-bottom: 0;
+}
+
 .game-card-link {
     color: inherit;
     text-decoration: none;
