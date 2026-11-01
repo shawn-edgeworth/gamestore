@@ -33,6 +33,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidAudience = "GameStore.Api",
         ValidateLifetime = true
     };
+    options.Events.OnTokenValidated += async (TokenValidatedContext context) =>
+    {
+        var claimsPrincipal = context.Principal;
+        var userRepository = context.HttpContext.RequestServices.GetRequiredService<UserRepository>();
+
+        if (!TryGetUserId(claimsPrincipal, out var userId))
+        {
+            context.Fail("User is not found.");
+            return;
+        }
+
+        var user = await userRepository.GetUserById(userId);
+
+        if (user is null)
+        {
+            context.Fail("User is not found.");
+            return;
+        }
+
+        context.Success();
+    };
 });
 
 builder.Services.AddSwaggerGen(options =>
@@ -477,9 +498,14 @@ static IResult ToHttpError(OperationErrorType errorType, string? error)
     };
 }
 
-static bool TryGetUserId(ClaimsPrincipal user, out int userId)
+static bool TryGetUserId(ClaimsPrincipal? claimsPrincipal, out int userId)
 {
-    return Int32.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
+    userId = 0;
+    if (claimsPrincipal is null)
+    {
+        return false;
+    }
+    return Int32.TryParse(claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
 }
 
 public partial class Program { }

@@ -1,6 +1,6 @@
 # GameStore — прогресс обучения
 
-> Живой файл. Агент обновляет после закрытого шага. Последнее обновление: **2026-10-30**
+> Живой файл. Агент обновляет после закрытого шага. Последнее обновление: **2026-11-01**
 
 Карта файлов: [`structure.md`](./structure.md). Roadmap: [`plan.md`](./plan.md).
 
@@ -12,7 +12,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** возвраты закрыты (API + кнопка на заказах). Алгоритмы — отдельно, не в этом репо. В GameStore дальше Docker Compose. Тесты не углублять.
+**Фокус сейчас:** Postgres в Docker Compose работает, API по-прежнему `dotnet run` на машине. В README ещё нет инструкции про Compose. Алгоритмы — отдельно, не в этом репо. Тесты не углублять.
 
 ---
 
@@ -27,10 +27,10 @@
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice`. Статус: enum `OrderStatus` (`Paid = 0`, `Refunded = 1`). `POST /orders/{id}/refund`: полный возврат, сумма со снимка, один `SaveChanges` (баланс + статус), повтор → 400, чужой → 404. Витрина: кнопка на `orders.html` |
 | Wallet | `User.Balance` `numeric(12,2)` (`MoneyHelper` 12,2). `GET /users/me`, `POST /users/me/balance` (только пополнение) |
 | Cart | одна корзина на пользователя (уникальный `UserId`). Позиции: уникальные `CartId`+`GameId`. Игра удалена → Cascade строк корзины. Заказ↔игра Restrict |
-| README | есть: запуск, user-secrets, миграции, сценарии Swagger |
+| README | есть: запуск, user-secrets, миграции, сценарии Swagger; **блока Compose ещё нет** |
 | Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк, корзина, **возврат на заказах**) |
-| Docker | нет |
-| Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, `feature/cart`, сейчас **`feature/refunds`** |
+| Docker | `docker-compose.yml`: только Postgres 16, named volume `gameStoreData`, порт 5432. API в контейнер не клали. Для GameStore база = Compose; служба Windows на 5432 выключена |
+| Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds`, сейчас **`feature/docker`** |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
 
 Эндпоинты (префикса `/api` нет):
@@ -81,10 +81,10 @@
 | DTO / Entity / маппинг | + | ✓ | снимок чека vs живой каталог в корзине |
 | Валидация | + | ✓ | FluentValidation + `OperationResult` |
 | Тесты (unit + integration) | ~ | ✓ | каркас есть; не приоритет |
-| Git (checkout/commit/push/pull) | + | ✓ | ветки `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds` |
+| Git (checkout/commit/push/pull) | + | ✓ | ветки `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds`, `feature/docker` |
 | Алгоритмы | ~ | ✓ | отдельно, 3–5 задач/неделя |
 | Auth (JWT) | + | ~ / ✓ | login/register, Admin, свои заказы/корзина/кошелёк/возврат |
-| Docker | — | ~ | ближе к финалу |
+| Docker | ~ | ~ | Compose: только Postgres; API с хоста |
 
 ---
 
@@ -122,6 +122,9 @@
 - [x] `OrderStatus` на сущности и в DTO (`Paid` / `Refunded`); `OrderDetails.Id`; CreateOrder и Checkout ставят `Paid`
 - [x] `POST /orders/{id}/refund`: один `SaveChanges`, не `AddMoney`; `RequireAuthorization`
 - [x] Витрина возврата: `orders.html` — `Paid` → кнопка, `Refunded` → текст, после успеха обновляются список и баланс в шапке
+- [x] `docker-compose.yml`: Postgres 16, `POSTGRES_DB=GameStore`, пароль `postgres` как в `appsettings.json`, named volume на `/var/lib/postgresql/data`
+- [x] Строка `ConnectionStrings:GameStore` убрана из user-secrets; остался `Jwt:Key`. Иначе секрет перекрывал пароль контейнера (`28P01`)
+- [x] `OnTokenValidated`: нет строки в `"Users"` → `401`, эндпоинт не зовётся. Витрина чистит сессию по `401`
 
 ### Известный техдолг (не забывать)
 
@@ -129,18 +132,19 @@
 - [ ] `MoneyHelper` без неймспейса `GameStore.Api.*`
 - [ ] `GameValidatorTests` устарели; integration-тесты не доведены — не чинить в приоритете
 - [ ] CS8604 в `JwtTokenService`: `Jwt:Key` теоретически null (в `Program.cs` уже есть throw)
-- [ ] Нет Docker Compose
+- [ ] CS8604 в `OnTokenValidated`: `context.Principal` в типе библиотеки `ClaimsPrincipal?`
+- [ ] README не описывает `docker compose up -d` и что команды `ef` / `run` набирают на Windows, не в контейнере
 - [ ] SQL-индексы как тема разбора (на корзине уникальные уже есть)
 
 ### Дальше по проекту (приоритет)
 
-1. **Docker Compose** (PostgreSQL, опционально API)
+1. **README:** запуск через Compose (остаток этапа H)
 2. Алгоритмы 3–5 задач в неделю — в отдельном чате, не в этом репо
-3. Мелочи API (`totalCount`) — по пути
+3. Мелочи API (`totalCount`) — по пути. Контейнер с самим API — не сейчас
 
 Полный roadmap: [`plan.md`](./plan.md).
 
-Этапы A, C, D, E и README закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, включая корзину. H (Docker) открыт. I (алгоритмы) — параллельно.
+Этапы A, C, D, E закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, включая корзину. H: Compose с Postgres есть, текст в README ещё нет. I (алгоритмы) — параллельно.
 
 ---
 
@@ -176,7 +180,7 @@
 | Навык | Статус |
 | --- | --- |
 | status / add / commit | ✅ на этом репо |
-| branch / checkout / merge | ✅ ветки `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds` |
+| branch / checkout / merge | ✅ ветки `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds`, `feature/docker` |
 | push / pull / remote | ✅ `origin/master` |
 | осмысленные сообщения коммитов | ~ есть, держать короткие «зачем» |
 
@@ -258,6 +262,19 @@
 
 - `orders.html`: загрузка вынесена в `loadOrders`. `orderStatus === 0` → «Вернуть заказ», `=== 1` → «Возвращён» (ноль в JS ложный, голое `if` нельзя).
 - `POST /orders/{id}/refund` с JWT. 401 → логин. Ошибка → `readApiError` и перерисовка. Успех → список + `renderNav("orders")` (баланс в шапке). Кнопка `disabled` на время запроса.
+
+### 2026-11-01 — Docker Compose (Postgres)
+
+- Ветка `feature/docker`. Файл `docker-compose.yml`: образ `postgres:16`, named volume, без контейнера API.
+- Локальную службу Postgres на 5432 выключили: иначе Compose и `ef` попадали не в ту базу.
+- `28P01`: user-secrets держали старый `ConnectionStrings:GameStore` и перекрывали `appsettings.json`. Ключ убрали, `Jwt:Key` оставили. Для GameStore база = контейнер, секрет строки больше не дёргаем.
+- `dotnet ef` и `dotnet run` — в PowerShell из корня репозитория, не в контейнере. Миграции накатились, `GET /games` → 200.
+- README про Compose ещё не дописан.
+
+### 2026-11-01 — JWT: пользователь должен быть в БД
+
+- `OnTokenValidated` после подписи берёт `UserRepository` из `RequestServices`, `GetUserById`. Нет строки — `context.Fail`, `POST /games` → 401.
+- `TokenValidatedContext.Principal` в API библиотеки nullable; `GetRequiredService` null не возвращает.
 
 ---
 
