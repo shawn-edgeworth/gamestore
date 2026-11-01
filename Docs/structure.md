@@ -11,10 +11,11 @@
 | Путь | Зачем |
 | --- | --- |
 | `GameStore.sln` | Решение: API + тесты |
+| `docker-compose.yml` | Только Postgres 16; API с хоста через `localhost:5432` |
 | `GameStore.Api/` | Весь backend и статика `wwwroot` |
 | `GameStore.Api.Tests/` | xUnit + `WebApplicationFactory`; не приоритет |
 | `Docs/` | `plan.md`, `progress.md`, этот файл |
-| `README.md` | Запуск, user-secrets, миграции, Swagger |
+| `README.md` | Запуск, user-secrets, миграции, Swagger; блока Compose пока нет |
 | `.ai/base-rule.md` | Полное правило ментора |
 
 ---
@@ -55,7 +56,7 @@
 
 ## Инварианты (не ломать)
 
-- JWT: issuer `GameStore`, audience `GameStore.Api`, claim пользователя — `ClaimTypes.NameIdentifier`.
+- JWT: issuer `GameStore`, audience `GameStore.Api`, claim пользователя — `ClaimTypes.NameIdentifier`. После подписи `OnTokenValidated` ищет строку в `"Users"`; нет пользователя → 401.
 - Каталог GET публичный; запись игр/категорий — роль `Admin`; заказы, кошелёк, корзина, возврат — любой валидный JWT.
 - Чужой заказ → **404**, не 403.
 - Новый заказ: `OrderStatus = Paid`. Колонка `"OrderStatus"` — int, старые строки после миграции `0`.
