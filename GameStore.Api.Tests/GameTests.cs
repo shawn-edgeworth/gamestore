@@ -6,12 +6,12 @@ namespace GameStore.Api.Tests;
 
 public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client;
-    private readonly Random _random = new Random((int)DateTime.UtcNow.Ticks);
+    private readonly HttpClient client;
+    private readonly Random random = new Random((int)DateTime.UtcNow.Ticks);
 
     public GameTests(CustomWebApplicationFactory factory)
     {
-        _client = factory.CreateClient();
+        client = factory.CreateClient();
     }
 
     public async Task InitializeAsync()
@@ -38,7 +38,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
         var games = new Task[]
         {
             PostGame("Crash Bandicoot",9.99m,categoryId:1),
-            PostGame("Sonic the Hedgehog",4.99m,categoryId:2),
+            PostGame("Sonic The Hedgehog",4.99m,categoryId:2),
             PostGame("Arknights Endfield",15.99m,categoryId:3),
         };
 
@@ -52,7 +52,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             Name = name
         };
 
-        return _client.PostAsJsonAsync("/categories", createRequest);
+        return client.PostAsJsonAsync("/categories", createRequest);
     }
 
     private Task<HttpResponseMessage> PostGame(string name, decimal price,
@@ -67,11 +67,11 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             Price = price,
             Description = description is null ? $"{name}'s description" : description,
             ImageUrl = imageUrl is null ? $@"\images\{name}.png" : imageUrl,
-            ReleaseDate = date is null ? new DateOnly(_random.Next(2000, 2022), _random.Next(1, 12), _random.Next(1, 31)) : date,
-            CategoryId = categoryId is null ? _random.Next(1, 3) : categoryId.Value
+            ReleaseDate = date is null ? new DateOnly(random.Next(2000, 2022), random.Next(1, 12), random.Next(1, 31)) : date,
+            CategoryId = categoryId is null ? random.Next(1, 3) : categoryId.Value
         };
 
-        return _client.PostAsJsonAsync("/games", request);
+        return client.PostAsJsonAsync("/games", request);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
         Assert.Equal(new DateOnly(2026, 5, 15), game.ReleaseDate);
         Assert.Equal(1, game.CategoryId);
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
             $"/games/{game.Id}");
 
         Assert.Equal(
@@ -106,7 +106,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
     [Fact]
     public async Task GetGame_NonExistingId_ReturnsNotFound()
     {
-        var response = await _client.GetAsync(
+        var response = await client.GetAsync(
             $"/games/{int.MinValue}");
 
         Assert.Equal(
@@ -128,14 +128,14 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
     [Fact]
     public async Task DeleteGame_ExistingId_ReturnNoContent()
     {
-        var deleteResponse = await _client.DeleteAsync(
+        var deleteResponse = await client.DeleteAsync(
             $"/games/{1}");
 
         Assert.Equal(
             HttpStatusCode.NoContent,
             deleteResponse.StatusCode);
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
             $"/games/{1}");
 
         Assert.Equal(
@@ -157,7 +157,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             CategoryId = 2
         };
 
-        var putResponse = await _client.PutAsJsonAsync(
+        var putResponse = await client.PutAsJsonAsync(
             $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
@@ -165,7 +165,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             putResponse.StatusCode
         );
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
             $"/games/{1}");
 
         Assert.Equal(
@@ -197,7 +197,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             CategoryId = 2
         };
 
-        var putResponse = await _client.PutAsJsonAsync(
+        var putResponse = await client.PutAsJsonAsync(
             $"/games/{int.MinValue}", updateGameRequest);
 
         Assert.Equal(
@@ -214,7 +214,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             Price = 99.99m
         };
 
-        var patchResponse = await _client.PatchAsJsonAsync(
+        var patchResponse = await client.PatchAsJsonAsync(
             $"/games/{1}/price", updateGamePriceRequest);
 
         Assert.Equal(
@@ -222,7 +222,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             patchResponse.StatusCode
             );
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
         $"/games/{1}");
 
         Assert.Equal(
@@ -246,7 +246,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             Price = -100m
         };
 
-        var patchResponse = await _client.PatchAsJsonAsync(
+        var patchResponse = await client.PatchAsJsonAsync(
             $"/games/{1}/price", updateGamePriceRequest);
 
         Assert.Equal(
@@ -254,7 +254,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             patchResponse.StatusCode
             );
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
         $"/games/{1}");
 
         Assert.Equal(
@@ -281,7 +281,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             CategoryId = 2
         };
 
-        var putResponse = await _client.PutAsJsonAsync(
+        var putResponse = await client.PutAsJsonAsync(
             $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
@@ -289,7 +289,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             putResponse.StatusCode
             );
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
         $"/games/{1}");
 
         Assert.Equal(
@@ -319,7 +319,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
         };
 
 
-        var putResponse = await _client.PutAsJsonAsync(
+        var putResponse = await client.PutAsJsonAsync(
             $"/games/{1}", updateGameRequest);
 
         Assert.Equal(
@@ -327,7 +327,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
             putResponse.StatusCode
             );
 
-        var getResponse = await _client.GetAsync(
+        var getResponse = await client.GetAsync(
         $"/games/{1}");
 
         Assert.Equal(
@@ -346,7 +346,7 @@ public class GameTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifet
     [Fact]
     public async Task DeleteGame_NotExistingId_ReturnNotFound()
     {
-        var deleteResponse = await _client.DeleteAsync(
+        var deleteResponse = await client.DeleteAsync(
             $"/games/{int.MinValue}");
 
         Assert.Equal(
