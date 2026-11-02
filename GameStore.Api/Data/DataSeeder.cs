@@ -46,12 +46,18 @@ namespace GameStore.Api.Data
                 "Fighting",
                 "Idle",
                 "Roguelike",
+                "Strategy",
+                "Music",
+                "Rhytm",
                 "FPS",
                 "RTS",
                 "Novel",
                 "Quest",
                 "Puzzle",
-                "VR"
+                "VR",
+                "Simulation",
+                "Indie",
+                "Platformer"
             };
 
             foreach (var category in categories)
@@ -72,26 +78,30 @@ namespace GameStore.Api.Data
 
             var appIds = new[]
             {
-                730,    // Counter-Strike 2
-                570,    // Dota 2
-                578080, // PUBG
-                440,    // Team Fortress 2
-                252490, // Rust
-                304930, // Unturned
-                892970, // Valheim
-                1085660,// Destiny 2
-                1172470,// Apex Legends
-                1091500,// Cyberpunk 2077
-                271590, // GTA V
-                292030, // The Witcher 3
-                1086940,// Baldur's Gate 3
-                413150, // Stardew Valley
-                105600, // Terraria
-                4000,   // Garry's Mod
-                1145360,// Hades
-                236850, // Europa Universalis IV
-                1245620,// Elden Ring
-                1817070 // Marvel's Spider-Man Remastered
+                413150,
+                105600,
+                236850,
+                1817070,
+                4126040,
+                4732690,
+                731490,
+                996580,
+                1378990,
+                2215200,
+                728880,
+                1426210,
+                5335510,
+                433340,
+                1657630,
+                1641700,
+                3527290,
+                284160,
+                264710,
+                227300,
+                305620,
+                275850,
+                1798230,
+                2929250
             };
 
             Random random = new Random((int)DateTime.UtcNow.Ticks);
@@ -153,12 +163,26 @@ namespace GameStore.Api.Data
                 game.ReleaseDate = null;
             }
 
-            var firstGenre = data["genres"]?[0]?["description"]?.GetValue<string>() ?? string.Empty;
-            var category = categoires.FirstOrDefault(x => x.Name.ToLower().Equals(firstGenre.ToLower()));
+            Category? category = null;
+            var genres = data["genres"]?.AsArray();
+            if (genres is not null)
+            {
+                foreach (var genre in genres)
+                {
+                    var desc = genre?["description"]?.GetValue<string>()??string.Empty;
+                    category = categoires.FirstOrDefault(x => x.Name.ToLower().Equals(desc.ToLower()));
+                    if(category is not null)
+                    {
+                        break;
+                    }
+                }
+            }
+
             if (category is null)
             {
                 category = categoires[random.Next(0, categoires.Count)];
             }
+
             game.CategoryId = category.Id;
 
             return game;
