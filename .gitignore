@@ -6,6 +6,11 @@
 # dotenv files
 .env
 
+# Local mentor / editor notes — not part of the public app
+.ai/
+.cursor/
+Docs/
+
 # User-specific files
 *.rsuser
 *.suo
