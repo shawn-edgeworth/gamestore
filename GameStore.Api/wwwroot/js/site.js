@@ -103,6 +103,66 @@ function formatMoney(value) {
     return "$" + amount.toFixed(2);
 }
 
+function formatPrice(value) {
+    const amount = Number(value);
+    if (Number.isNaN(amount) || amount === 0) {
+        return "Бесплатно";
+    }
+
+    return "$" + amount.toFixed(2);
+}
+
+function formatReleaseDate(value) {
+    if (!value) {
+        return "";
+    }
+
+    const parsed = /^\d{4}-\d{2}-\d{2}/.test(String(value))
+        ? new Date(value + "T00:00:00")
+        : new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return String(value);
+    }
+
+    return parsed.toLocaleDateString("ru-RU");
+}
+
+function paginateList(items, page, pageSize) {
+    const total = items.length;
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const current = Math.min(Math.max(1, page), pageCount);
+    const start = (current - 1) * pageSize;
+    return {
+        page: current,
+        pageCount,
+        total,
+        items: items.slice(start, start + pageSize)
+    };
+}
+
+function fillPagers(page, pageCount, onGo) {
+    for (const pager of document.querySelectorAll("[data-pager]")) {
+        pager.replaceChildren();
+
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.textContent = "Назад";
+        prev.disabled = page <= 1;
+        prev.addEventListener("click", () => onGo(page - 1));
+
+        const label = document.createElement("p");
+        label.textContent = page + " из " + pageCount;
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.textContent = "Вперёд";
+        next.disabled = page >= pageCount;
+        next.addEventListener("click", () => onGo(page + 1));
+
+        pager.append(prev, label, next);
+    }
+}
+
 function createGameImage(url, alt) {
     const img = document.createElement("img");
     img.alt = alt ?? "";
@@ -139,7 +199,7 @@ function renderGames(root, games, layout) {
 
         const meta = document.createElement("p");
         const category = game.categoryName ?? "Без категории";
-        meta.textContent = category + " · " + formatMoney(game.price);
+        meta.textContent = category + " · " + formatPrice(game.price);
 
         const text = document.createElement("div");
         text.append(title, meta);
@@ -295,13 +355,24 @@ async function readApiError(response) {
     return raw;
 }
 
-function createCartLink(current) {
+function cartQuantity(cart) {
+    return (cart?.cartItems ?? []).reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+}
+
+function createCartLink(current, itemCount) {
     const link = document.createElement("a");
     link.href = "/cart.html";
     link.className = "nav-cart";
     link.dataset.nav = "cart";
-    link.setAttribute("aria-label", "Корзина");
+    link.setAttribute("aria-label", itemCount > 0 ? "Корзина, товаров: " + itemCount : "Корзина");
     link.innerHTML = cartIconSvg;
+    if (itemCount > 0) {
+        const badge = document.createElement("span");
+        badge.className = "nav-cart-badge";
+        badge.textContent = itemCount > 99 ? "99+" : String(itemCount);
+        link.append(badge);
+    }
+
     if (current === "cart") {
         link.setAttribute("aria-current", "page");
     }
@@ -334,7 +405,7 @@ async function renderNav(current) {
     }
 
     if (cartSlot) {
-        cartSlot.append(createCartLink(current));
+        cartSlot.append(createCartLink(current, 0));
     }
 
     const wallet = document.createElement("a");
@@ -359,6 +430,15 @@ async function renderNav(current) {
         wallet.textContent = formatMoney(me.balance);
     } catch {
         wallet.textContent = "Кошелёк";
+    }
+
+    try {
+        const cart = await fetchCart();
+        if (cartSlot && cart) {
+            cartSlot.replaceChildren(createCartLink(current, cartQuantity(cart)));
+        }
+    } catch {
+        // бейдж не рисуем, иконка корзины остаётся
     }
 
     const menu = document.createElement("details");

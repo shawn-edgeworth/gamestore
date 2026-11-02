@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корзина — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css?v=5">
+    <link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -14,8 +14,8 @@
         <p id="status">Загрузка…</p>
         <div id="cart"></div>
     </main>
-    <script src="/js/site.js?v=5"></script>
-    <script src="/js/layout.js?v=5"></script>
+    <script src="/js/site.js?v=8"></script>
+    <script src="/js/layout.js?v=8"></script>
     <script>
         mountHeader("cart");
 
@@ -91,8 +91,8 @@
                     const name = document.createElement("h2");
                     name.textContent = item.gameName;
                     const meta = document.createElement("p");
-                    meta.textContent = formatMoney(item.unitPrice) + " × " + item.quantity
-                        + " = " + formatMoney(lineSum);
+                    meta.textContent = formatPrice(item.unitPrice) + " × " + item.quantity
+                        + " = " + formatPrice(lineSum);
                     text.append(name, meta);
 
                     const stepper = createQtyStepper(item.quantity, {
@@ -119,7 +119,7 @@
                 }
 
                 const sum = document.createElement("p");
-                sum.textContent = "Итого: " + formatMoney(total);
+                sum.textContent = "Итого: " + formatPrice(total);
 
                 const checkout = document.createElement("button");
                 checkout.type = "button";

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Заказы — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css?v=5">
+    <link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -14,8 +14,8 @@
         <p id="status">Загрузка…</p>
         <div id="orders"></div>
     </main>
-    <script src="/js/site.js?v=5"></script>
-    <script src="/js/layout.js?v=5"></script>
+    <script src="/js/site.js?v=8"></script>
+    <script src="/js/layout.js?v=8"></script>
     <script>
         mountHeader("orders");
 
@@ -90,12 +90,12 @@
                         const lineSum = Number(item.unitPrice) * Number(item.quantity);
                         total += lineSum;
                         line.textContent =
-                            item.gameName + " × " + item.quantity + " · " + formatMoney(item.unitPrice);
+                            item.gameName + " × " + item.quantity + " · " + formatPrice(item.unitPrice);
                         list.append(line);
                     }
 
                     const sum = document.createElement("p");
-                    sum.textContent = "Итого: " + formatMoney(total);
+                    sum.textContent = "Итого: " + formatPrice(total);
 
                     article.append(heading, list, sum);
 

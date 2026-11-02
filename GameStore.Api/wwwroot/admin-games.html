@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Игры — редактирование</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css?v=7">
+    <link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -15,7 +15,7 @@
         <section class="steam-import">
             <label>
                 Ссылка Steam
-                <input id="steam-url" type="url" placeholder="https://store.steampowered.com/app/2429450/Woodcutter/">
+                <input id="steam-url" type="url" placeholder="https://store.steampowered.com/app/1234560/Game_Name/">
             </label>
             <button type="button" id="steam-parse">Заполнить форму</button>
         </section>
@@ -54,6 +54,7 @@
                 <button type="button" id="game-reset" class="secondary">Новая игра</button>
             </div>
         </form>
+        <div class="pager" data-pager></div>
         <div class="overflow-auto">
             <table class="admin-table">
                 <thead>
@@ -68,12 +69,13 @@
                 <tbody id="games-body"></tbody>
             </table>
         </div>
+        <div class="pager" data-pager></div>
     </main>
-    <script src="/js/site.js?v=7"></script>
-    <script src="/js/layout.js?v=7"></script>
+    <script src="/js/site.js?v=8"></script>
+    <script src="/js/layout.js?v=8"></script>
     <script>
         mountHeader("admin-games");
     </script>
-    <script src="/js/admin.js?v=7"></script>
+    <script src="/js/admin.js?v=8"></script>
 </body>
 </html>

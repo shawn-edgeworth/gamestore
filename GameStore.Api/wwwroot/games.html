@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Все игры — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css?v=5">
+    <link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -21,8 +21,8 @@
         <div id="games" class="game-list" data-layout="list"></div>
         <div class="pager" data-pager></div>
     </main>
-    <script src="/js/site.js?v=5"></script>
-    <script src="/js/layout.js?v=5"></script>
+    <script src="/js/site.js?v=8"></script>
+    <script src="/js/layout.js?v=8"></script>
     <script>
         mountHeader("games");
 
@@ -49,27 +49,21 @@
             window.location.search = query.toString();
         }
 
-        function fillPagers(gameCount) {
-            for (const pager of document.querySelectorAll("[data-pager]")) {
-                pager.replaceChildren();
-
-                const prev = document.createElement("button");
-                prev.type = "button";
-                prev.textContent = "Назад";
-                prev.disabled = page <= 1;
-                prev.addEventListener("click", () => goTo(page - 1, pageSize));
-
-                const label = document.createElement("p");
-                label.textContent = "Страница " + page;
-
-                const next = document.createElement("button");
-                next.type = "button";
-                next.textContent = "Вперёд";
-                next.disabled = gameCount < pageSize;
-                next.addEventListener("click", () => goTo(page + 1, pageSize));
-
-                pager.append(prev, label, next);
+        function showPage(allGames) {
+            const paged = paginateList(allGames, page, pageSize);
+            if (paged.page !== page) {
+                goTo(paged.page, pageSize);
+                return;
             }
+
+            if (paged.total === 0) {
+                status.textContent = "Каталог пуст.";
+            } else {
+                status.textContent = "";
+                renderGames(root, paged.items, "list");
+            }
+
+            fillPagers(paged.page, paged.pageCount, (nextPage) => goTo(nextPage, pageSize));
         }
 
         for (const link of document.querySelectorAll("#page-sizes a")) {
@@ -86,21 +80,11 @@
 
         (async function () {
             try {
-                const games = await fetchGames({ page, pageSize });
-
-                if (games.length === 0) {
-                    status.textContent = page === 1
-                        ? "Каталог пуст."
-                        : "На этой странице игр нет.";
-                } else {
-                    status.textContent = "";
-                    renderGames(root, games, "list");
-                }
-
-                fillPagers(games.length);
+                const games = await fetchGames({});
+                showPage(games);
             } catch (error) {
                 status.textContent = error.message;
-                fillPagers(0);
+                fillPagers(page, 1, () => {});
             }
         })();
     </script>

@@ -122,16 +122,16 @@ async function loadGamesAdmin() {
     const steamUrl = document.getElementById("steam-url");
     const steamParse = document.getElementById("steam-parse");
     let categories = [];
+    let allGames = [];
+    let adminPage = 1;
+    const adminPageSize = 10;
 
-    async function reload() {
-        status.textContent = "";
-        const loaded = await Promise.all([fetchGames({}), fetchCategories()]);
-        const games = loaded[0];
-        categories = loaded[1];
-        fillCategorySelect(categorySelect, categories, gameForm.categoryId.value);
+    function renderGamesTable() {
+        const paged = paginateList(allGames, adminPage, adminPageSize);
+        adminPage = paged.page;
         gamesBody.replaceChildren();
 
-        for (const game of games) {
+        for (const game of paged.items) {
             const row = document.createElement("tr");
 
             const picture = document.createElement("td");
@@ -141,7 +141,7 @@ async function loadGamesAdmin() {
             name.textContent = game.name;
 
             const price = document.createElement("td");
-            price.textContent = formatMoney(game.price);
+            price.textContent = formatPrice(game.price);
 
             const category = document.createElement("td");
             category.textContent = game.categoryName ?? "";
@@ -189,6 +189,20 @@ async function loadGamesAdmin() {
             row.append(picture, name, price, category, actions);
             gamesBody.append(row);
         }
+
+        fillPagers(paged.page, paged.pageCount, (nextPage) => {
+            adminPage = nextPage;
+            renderGamesTable();
+        });
+    }
+
+    async function reload() {
+        status.textContent = "";
+        const loaded = await Promise.all([fetchGames({}), fetchCategories()]);
+        allGames = loaded[0];
+        categories = loaded[1];
+        fillCategorySelect(categorySelect, categories, gameForm.categoryId.value);
+        renderGamesTable();
     }
 
     gameForm.addEventListener("submit", async (event) => {
@@ -222,7 +236,7 @@ async function loadGamesAdmin() {
     async function fillFromSteam() {
         const appId = parseSteamAppId(steamUrl.value);
         if (!appId) {
-            status.textContent = "Вставьте ссылку вида https://store.steampowered.com/app/2429450/Woodcutter/";
+            status.textContent = "Вставьте ссылку на страницу игры в Steam, например https://store.steampowered.com/app/1234560/Game_Name/";
             return;
         }
 

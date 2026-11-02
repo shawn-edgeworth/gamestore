@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Игра — GameStore</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/css/site.css?v=5">
+    <link rel="stylesheet" href="/css/site.css?v=8">
 </head>
 <body>
     <header class="container" id="site-header"></header>
@@ -13,8 +13,8 @@
         <p id="status">Загрузка…</p>
         <article id="detail" class="game-detail" hidden></article>
     </main>
-    <script src="/js/site.js?v=5"></script>
-    <script src="/js/layout.js?v=5"></script>
+    <script src="/js/site.js?v=8"></script>
+    <script src="/js/layout.js?v=8"></script>
     <script>
         mountHeader("games");
 
@@ -132,18 +132,22 @@
 
                 const meta = document.createElement("p");
                 const category = game.categoryName ?? "Без категории";
-                meta.textContent = category + " · " + formatMoney(game.price);
+                meta.textContent = category + " · " + formatPrice(game.price);
+
+                const released = document.createElement("p");
+                if (game.releaseDate) {
+                    released.textContent = "Дата выхода: " + formatReleaseDate(game.releaseDate);
+                }
 
                 const description = document.createElement("p");
                 description.textContent = game.description ?? "";
 
-                detail.append(
-                    createGameImage(game.imageUrl, game.name),
-                    title,
-                    meta,
-                    description,
-                    cartHost
-                );
+                detail.append(createGameImage(game.imageUrl, game.name), title, meta);
+                if (game.releaseDate) {
+                    detail.append(released);
+                }
+
+                detail.append(description, cartHost);
 
                 await renderCartControls(game.id);
             } catch (error) {
