@@ -80,6 +80,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddHttpClient();
+
+builder.Services.AddScoped<DataSeeder>();
 
 builder.Services.AddScoped<GameRepository>();
 builder.Services.AddScoped<GameService>();
@@ -472,7 +475,29 @@ app.MapPost("/cart/checkout", async (ClaimsPrincipal user, OrderService orderSer
     return Results.Created($"/orders/{result.Value.Id}", result.Value.ToResponse());
 }).RequireAuthorization();
 
+app.MapGet("/steam/appdetails", async (IHttpClientFactory httpClientFactory, int appids) =>
+{
+    var httpClient = httpClientFactory.CreateClient();
+    var response = await httpClient.GetAsync($"https://store.steampowered.com/api/appdetails?appids={appids}&cc=us&l=english");
+    if (response.StatusCode is not System.Net.HttpStatusCode.OK)
+    {
+        return Results.Problem(statusCode: (int)response.StatusCode);
+    }
+
+    var rawContent = await response.Content.ReadAsStringAsync();
+    return Results.Content(rawContent, "application/json");
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<GameDbContext>();
+    context.Database.Migrate();
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    await seeder.SeedAsync();
+}
+
 app.Run();
+
 
 static IResult ToHttpError(OperationErrorType errorType, string? error)
 {

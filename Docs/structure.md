@@ -15,7 +15,7 @@
 | `GameStore.Api/` | Весь backend и статика `wwwroot` |
 | `GameStore.Api.Tests/` | xUnit + `WebApplicationFactory`; не приоритет |
 | `Docs/` | `plan.md`, `progress.md`, этот файл |
-| `README.md` | Запуск, user-secrets, миграции, Swagger; блока Compose пока нет |
+| `README.md` | Запуск, user-secrets, Swagger; блока Compose пока нет |
 | `.ai/base-rule.md` | Полное правило ментора |
 
 ---
@@ -26,10 +26,10 @@
 
 | Папка | Неймспейс | Роль |
 | --- | --- | --- |
-| `Program.cs` | (top-level) | DI, JWT, pipeline, все `MapGet`/`MapPost`. `TryGetUserId`, `ToHttpError` |
+| `Program.cs` | (top-level) | DI, JWT, pipeline, все `MapGet`/`MapPost`. До `Run()`: `Migrate()` + `DataSeeder`. `TryGetUserId`, `ToHttpError` |
 | `Models/{Game,Category,User,Order,Cart}/` | `GameStore.Api.Models` | Сущности и DTO, **один тип — один файл** |
 | `Services/` | `GameStore.Api.Services` | Валидация, правила, `OperationResult<T>` |
-| `Data/` | `GameStore.Api.Data` | Репозитории, `GameDbContext` |
+| `Data/` | `GameStore.Api.Data` | Репозитории, `GameDbContext`, `DataSeeder` |
 | `Mappers/` | `GameStore.Api.Mappers` | Entity → response DTO |
 | `Validation/` | `GameStore.Api.Validation` | FluentValidation; подхватывается `AddValidatorsFromAssemblyContaining` |
 | `Helpers/MoneyHelper.cs` | (глобальный) | `Precision = 12`, `Scale = 2` для денег |
@@ -50,7 +50,7 @@
 | Деньги в БД | `GameDbContext` `HasPrecision`, миграции `AddUserBalance` / `*MoneyPrecision` |
 | Связи FK | `GameDbContext.OnModelCreating`: заказ↔игра **Restrict**, корзина↔игра **Cascade**, заказ→позиции **Cascade** |
 | Ошибки HTTP | `Services/GameOperationResult.cs` (`OperationResult<T>`), `OperationErrorType`, `ToHttpError` в `Program.cs` |
-| Витрина | `wwwroot/*.html` (`cart.html`, `game.html` «В корзину», `orders.html` «Вернуть заказ»), `wwwroot/js/{site,layout,admin}.js`, `wwwroot/css/site.css` |
+| Витрина | `wwwroot/*.html` (`cart.html`, `game.html` «В корзину», `orders.html` «Вернуть заказ», `admin-games.html` вставка из Steam), `wwwroot/js/{site,layout,admin}.js`, `wwwroot/css/site.css` |
 
 ---
 
@@ -85,6 +85,7 @@
 | DELETE | `/cart/items/{gameId}` | `CartService.RemoveItem` |
 | PATCH | `/cart/items/{gameId}` | `CartService.UpdateItem` |
 | POST | `/cart/checkout` | `OrderService.Checkout` → `OrderRepository.Checkout` |
+| GET | `/steam/appdetails` | `IHttpClientFactory` в `Program.cs`, роль Admin |
 
 POST `/cart/items` прибавляет количество, PATCH ставит его. Checkout не вызывает `CreateOrder`: один `SaveChanges` на заказ, баланс и `cart.Items.Clear()`. `POST /orders` с телом живёт отдельно.
 

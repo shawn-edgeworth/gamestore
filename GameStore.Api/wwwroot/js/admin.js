@@ -1,3 +1,83 @@
+function parseSteamAppId(value) {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+        return trimmed;
+    }
+
+    const match = trimmed.match(/\/app\/(\d+)/i);
+    return match ? match[1] : null;
+}
+
+function stripHtmlText(value) {
+    if (!value) {
+        return "";
+    }
+
+    const box = document.createElement("div");
+    box.innerHTML = value;
+    return (box.textContent || "").trim();
+}
+
+function steamPriceValue(data) {
+    if (data.is_free) {
+        return 0;
+    }
+
+    const cents = data.price_overview && data.price_overview.final;
+    if (typeof cents !== "number") {
+        return 0;
+    }
+
+    return cents / 100;
+}
+
+function steamReleaseDateValue(releaseDate) {
+    if (!releaseDate || !releaseDate.date) {
+        return "";
+    }
+
+    const parsed = new Date(releaseDate.date);
+    if (Number.isNaN(parsed.getTime())) {
+        return "";
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+}
+
+function pickCategoryId(categories, genres) {
+    if (!categories.length) {
+        return "";
+    }
+
+    const genreNames = (genres ?? [])
+        .map((genre) => String(genre.description ?? "").trim().toLowerCase())
+        .filter(Boolean);
+
+    const matched = categories.find((category) =>
+        genreNames.includes(category.name.trim().toLowerCase())
+    );
+
+    if (matched) {
+        return String(matched.id);
+    }
+
+    const index = Math.floor(Math.random() * categories.length);
+    return String(categories[index].id);
+}
+
+function applySteamGameToForm(form, data, categories) {
+    form.gameId.value = "";
+    form.name.value = data.name ?? "";
+    form.price.value = steamPriceValue(data).toFixed(2);
+    form.description.value = stripHtmlText(data.short_description || data.detailed_description || "");
+    form.releaseDate.value = steamReleaseDateValue(data.release_date);
+    form.imageUrl.value = data.header_image ?? "";
+    form.categoryId.value = pickCategoryId(categories, data.genres);
+}
+
 function fillCategorySelect(select, categories, selectedId) {
     select.replaceChildren();
 
@@ -39,10 +119,15 @@ async function loadGamesAdmin() {
     const status = document.getElementById("admin-status");
     const gamesBody = document.getElementById("games-body");
     const categorySelect = gameForm.categoryId;
+    const steamUrl = document.getElementById("steam-url");
+    const steamParse = document.getElementById("steam-parse");
+    let categories = [];
 
     async function reload() {
         status.textContent = "";
-        const [games, categories] = await Promise.all([fetchGames({}), fetchCategories()]);
+        const loaded = await Promise.all([fetchGames({}), fetchCategories()]);
+        const games = loaded[0];
+        categories = loaded[1];
         fillCategorySelect(categorySelect, categories, gameForm.categoryId.value);
         gamesBody.replaceChildren();
 
@@ -133,6 +218,52 @@ async function loadGamesAdmin() {
         gameForm.reset();
         gameForm.gameId.value = "";
     });
+
+    async function fillFromSteam() {
+        const appId = parseSteamAppId(steamUrl.value);
+        if (!appId) {
+            status.textContent = "Вставьте ссылку вида https://store.steampowered.com/app/2429450/Woodcutter/";
+            return;
+        }
+
+        steamParse.disabled = true;
+        status.textContent = "Загружаю данные Steam…";
+
+        try {
+            const response = await fetch("/steam/appdetails?appids=" + encodeURIComponent(appId), {
+                headers: authHeaders()
+            });
+
+            if (!response.ok) {
+                status.textContent = await readApiError(response);
+                return;
+            }
+
+            const payload = await response.json();
+            const entry = payload[appId];
+            if (!entry || !entry.success || !entry.data) {
+                status.textContent = "Steam не вернул игру для app id " + appId;
+                return;
+            }
+
+            applySteamGameToForm(gameForm, entry.data, categories);
+            status.textContent = "Поля заполнены из Steam. Проверьте и нажмите «Сохранить игру».";
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            steamParse.disabled = false;
+        }
+    }
+
+    if (steamParse && steamUrl) {
+        steamParse.addEventListener("click", fillFromSteam);
+        steamUrl.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                fillFromSteam();
+            }
+        });
+    }
 
     try {
         await reload();
