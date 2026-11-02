@@ -4,9 +4,9 @@ namespace GameStore.Api.Models
 {
     public class UserLoginRequest
     {
-        [DefaultValue("123@gmail.com")]
+        [DefaultValue("admin@gmail.com")]
         public string Email { get; set; } = string.Empty;
-        [DefaultValue("123123")]
+        [DefaultValue("admin123")]
         public string Password { get; set; } = string.Empty;
     }
 }
