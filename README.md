@@ -4,7 +4,7 @@
 
 ## Стек
 
-ASP.NET Core, PostgreSQL, Minimal API, EF Core, JWT, FluentValidation, Docker
+`ASP.NET Core`, `PostgreSQL`, `Minimal API`, `EF Core`, `JWT`, `FluentValidation`, `Docker`
 
 ## Как запустить
 
@@ -20,7 +20,7 @@ ASP.NET Core, PostgreSQL, Minimal API, EF Core, JWT, FluentValidation, Docker
 
 - При первом запуске, если в БД нет записей, - будет произведен сидинг таблиц БД.
 - Будут добавлены категории и игры по умолчанию
-- Будет добавлен один пользователь с ролью Admin: email:[admin@gmail.com](mailto:admin@gmail.com) и password:admin123
+- Будет добавлен один пользователь с ролью Admin: email:**admin@gmail.com** и password:**admin123**
 - При вызове: `docker compose down -v` том с БД сотрется - данные снова засидятся, но все данные потеряются, которые были добавлены вручную
 
 ## Регистрация, вход и JWT
@@ -34,12 +34,12 @@ ASP.NET Core, PostgreSQL, Minimal API, EF Core, JWT, FluentValidation, Docker
 
 ### Регистрация
 
-- Найти endpoint POST /register
+- Найти endpoint `POST /register`
 - Ввести email и пароль
 
 ### Аутентификация
 
-- Найти endpoint POST /login
+- Найти endpoint `POST /login`
 - Ввести email и пароль
 - Из ответа взять поле Token
 - В самом верху страницы найти кнопку Authorize
@@ -47,23 +47,23 @@ ASP.NET Core, PostgreSQL, Minimal API, EF Core, JWT, FluentValidation, Docker
 
 ### Оформление заказа (необходима аутентификация)
 
-- Найти endpoint POST /orders
+- Найти endpoint `POST /orders`
 - Ввести данные о заказах (gameId и quantity)
 
 ### Просмотр заказов (необходима аутентификация)
 
-- Найти endpoint GET /orders
+- Найти endpoint `GET /orders`
 - Получить список заказов
 
 ### Просмотр конкретного заказа (необходима аутентификация)
 
-- Найти endpoint GET /orders/{id}
+- Найти endpoint `GET /orders/{id}`
 - Ввести id заказа
-- Если заказ принадлежит пользователю, то в ответе придет информация о заказе, иначе - 404
+- Если заказ принадлежит пользователю, то в ответе придет информация о заказе, иначе - `404`
 
 ### Работа с играми и категориями (необходима аутентификация и роль для некоторых операций)
 
-- Существует общий доступ к каталогу через GET /games, GET /games/{id}, GET /categories, GET /categories/{id}
-- Редактирование игр и категорий доступно только пользователям с ролью "Admin"
-- Поддерживаются операции POST, PUT, PATCH, DELETE
+- Существует общий доступ к каталогу через `GET /games`, `GET /games/{id}`, `GET /categories`, `GET /categories/{id}`
+- Редактирование игр и категорий доступно только пользователям с ролью `"Admin"`
+- Поддерживаются операции `POST`, `PUT`, `PATCH`, `DELETE`
 
