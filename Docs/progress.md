@@ -1,6 +1,6 @@
 # GameStore — прогресс обучения
 
-> Живой файл. Агент обновляет после закрытого шага. Последнее обновление: **2026-11-01**
+> Живой файл. Агент обновляет после закрытого шага. Последнее обновление: **2026-11-02**
 
 Карта файлов: [`structure.md`](./structure.md). Roadmap: [`plan.md`](./plan.md).
 
@@ -12,7 +12,7 @@
 
 Ожидания курса (с сайта): C# / алгоритмы / базовый Git / коллекции + LINQ (`Where`/`Sum`). Плюс — свой проект. На стажировке дальше: AspNet Core, EF Core, GitLab, Docker, брокеры и т.д.
 
-**Фокус сейчас:** Postgres в Docker Compose работает, API по-прежнему `dotnet run` на машине. В README ещё нет инструкции про Compose. Алгоритмы — отдельно, не в этом репо. Тесты не углублять.
+**Фокус сейчас:** Postgres в Docker, схема и сид при старте API. В README ещё нет инструкции про Compose. Алгоритмы — отдельно, не в этом репо. Тесты не углублять.
 
 ---
 
@@ -27,9 +27,9 @@
 | Orders | `POST /orders`, `GET /orders`, `GET /orders/{id}` (свой → 200, чужой → 404). Списание `User.Balance` в том же `SaveChanges`. Чек: снимок `OrderItem.GameName` + `UnitPrice`. Статус: enum `OrderStatus` (`Paid = 0`, `Refunded = 1`). `POST /orders/{id}/refund`: полный возврат, сумма со снимка, один `SaveChanges` (баланс + статус), повтор → 400, чужой → 404. Витрина: кнопка на `orders.html` |
 | Wallet | `User.Balance` `numeric(12,2)` (`MoneyHelper` 12,2). `GET /users/me`, `POST /users/me/balance` (только пополнение) |
 | Cart | одна корзина на пользователя (уникальный `UserId`). Позиции: уникальные `CartId`+`GameId`. Игра удалена → Cascade строк корзины. Заказ↔игра Restrict |
-| README | есть: запуск, user-secrets, миграции, сценарии Swagger; **блока Compose ещё нет** |
-| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка, кошелёк, корзина, **возврат на заказах**) |
-| Docker | `docker-compose.yml`: только Postgres 16, named volume `gameStoreData`, порт 5432. API в контейнер не клали. Для GameStore база = Compose; служба Windows на 5432 выключена |
+| README | есть: запуск, user-secrets, Swagger; **блока Compose ещё нет** |
+| Frontend | статика `wwwroot` (каталог, поиск, логин, заказ, админка со **вставкой из Steam**, кошелёк, корзина, возврат на заказах) |
+| Docker | `docker-compose.yml`: только Postgres 16, named volume `gameStoreData`, порт 5432. API в контейнер не клали. Старт API: `Migrate()` + `DataSeeder` (категории, админ, игры со Steam) |
 | Git | `origin/master`; фичи ветками `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds`, сейчас **`feature/docker`** |
 | Архитектура | Endpoint → Service → Repository → DbContext. Один тип — один файл. Неймспейсы: Models, Services, Data, Mappers, Validation |
 
@@ -62,6 +62,7 @@
 | DELETE | `/cart/items/{gameId}` | JWT | ✅ нет корзины/позиции → 404; шапка `"Carts"` остаётся |
 | PATCH | `/cart/items/{gameId}` | JWT | ✅ ставит `Quantity`, не прибавляет; нет позиции → 404 |
 | POST | `/cart/checkout` | JWT | ✅ заказ + списание + очистка `CartItem` в одном `SaveChanges`; пустая корзина → 400 |
+| GET | `/steam/appdetails` | Admin | ✅ прокси Steam `appdetails`; тело как есть, `cc=us&l=english` |
 
 ---
 
@@ -84,7 +85,7 @@
 | Git (checkout/commit/push/pull) | + | ✓ | ветки `feature/frontend`, `feature/wallet`, `feature/cart`, `feature/refunds`, `feature/docker` |
 | Алгоритмы | ~ | ✓ | отдельно, 3–5 задач/неделя |
 | Auth (JWT) | + | ~ / ✓ | login/register, Admin, свои заказы/корзина/кошелёк/возврат |
-| Docker | ~ | ~ | Compose: только Postgres; API с хоста |
+| Docker | ~ | ~ | Compose: только Postgres; `Migrate` + сид на старте API |
 
 ---
 
@@ -125,6 +126,8 @@
 - [x] `docker-compose.yml`: Postgres 16, `POSTGRES_DB=GameStore`, пароль `postgres` как в `appsettings.json`, named volume на `/var/lib/postgresql/data`
 - [x] Строка `ConnectionStrings:GameStore` убрана из user-secrets; остался `Jwt:Key`. Иначе секрет перекрывал пароль контейнера (`28P01`)
 - [x] `OnTokenValidated`: нет строки в `"Users"` → `401`, эндпоинт не зовётся. Витрина чистит сессию по `401`
+- [x] Админка игр: ссылка Steam → `app id` → `GET /steam/appdetails` → поля формы. Категория по `genres`, иначе случайная из существующих
+- [x] `DataSeeder`: до `app.Run()` scope → `Migrate()` → категории / админ `admin@gmail.com` / игры из Steam (`JsonNode`, один `CreateClient` на пачку). Повторный старт не дублирует (`AnyAsync`)
 
 ### Известный техдолг (не забывать)
 
@@ -144,7 +147,7 @@
 
 Полный roadmap: [`plan.md`](./plan.md).
 
-Этапы A, C, D, E закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, включая корзину. H: Compose с Postgres есть, текст в README ещё нет. I (алгоритмы) — параллельно.
+Этапы A, C, D, E закрыты. SQL (B) по запросам закрыт. G (витрина) сделана как статика, включая корзину. H: Compose с Postgres + сид при старте есть, текст в README ещё нет. I (алгоритмы) — параллельно.
 
 ---
 
@@ -275,6 +278,17 @@
 
 - `OnTokenValidated` после подписи берёт `UserRepository` из `RequestServices`, `GetUserById`. Нет строки — `context.Fail`, `POST /games` → 401.
 - `TokenValidatedContext.Principal` в API библиотеки nullable; `GetRequiredService` null не возвращает.
+
+### 2026-11-02 — парсер Steam в админке
+
+- Браузер Steam не читает из‑за CORS. `GET /steam/appdetails?appids=` проксирует `HttpClient`, тело `ReadAsStringAsync` + `Results.Content`, не `Ok(response.Content)`.
+- `wwwroot/admin-games.html`: ссылка → app id из `/app/123/`, поля формы из `name` / `final/100` / `short_description` / `header_image` / `release_date`. Жанр Steam `genres` матчится с категорией GameStore, иначе случайная.
+
+### 2026-11-02 — сид при старте
+
+- `DataSeeder` + `CreateScope` до `app.Run()`. Сначала `Migrate()`, потом категории, игры со Steam (`JsonNode`), админ.
+- `CreateClient()` один на пачку app id; в `GET /steam/appdetails` на каждый клик — так и надо: фабрика, не `new HttpClient()`.
+- Идемпотентность: `AnyAsync`. Повторный старт не плодит строки.
 
 ---
 

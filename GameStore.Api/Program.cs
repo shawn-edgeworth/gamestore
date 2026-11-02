@@ -82,6 +82,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddHttpClient();
 
+builder.Services.AddScoped<DataSeeder>();
+
 builder.Services.AddScoped<GameRepository>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<CategoryRepository>();
@@ -481,10 +483,21 @@ app.MapGet("/steam/appdetails", async (IHttpClientFactory httpClientFactory, int
     {
         return Results.Problem(statusCode: (int)response.StatusCode);
     }
-    return Results.Ok(response.Content);
-}).RequireAuthorization(policy => policy.RequireRole("Admin")); ;
+
+    var rawContent = await response.Content.ReadAsStringAsync();
+    return Results.Content(rawContent, "application/json");
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<GameDbContext>();
+    context.Database.Migrate();
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    await seeder.SeedAsync();
+}
 
 app.Run();
+
 
 static IResult ToHttpError(OperationErrorType errorType, string? error)
 {

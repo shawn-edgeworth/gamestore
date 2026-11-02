@@ -164,11 +164,13 @@ nav fieldset {
 
 .steam-import {
     display: block;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
 }
 
-.steam-import fieldset[role="group"] {
-    margin-bottom: 0;
+.steam-import button {
+    width: auto;
 }
 
 .game-card-link {
