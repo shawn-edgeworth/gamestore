@@ -6,6 +6,11 @@
 
 `ASP.NET Core`, `PostgreSQL`, `Minimal API`, `EF Core`, `JWT`, `FluentValidation`, `Docker`
 
+## Описание
+
+- Docker поднимает только `PostgreSQL`. **Postgres слушает localhost:5432**
+- API находится вне контейнера. Запуска API из корня проекта.
+
 ## Как запустить
 
 - Установить и запустить Docker Desktop
@@ -13,8 +18,6 @@
 - Единожды установить `Jwt:Key`, используя команду `dotnet user-secrets set "Jwt:Key" "CustomKey" --project .\GameStore.Api\GameStore.Api.csproj`
 - Запустить приложение с помощью команды: `dotnet run --project .\GameStore.Api\GameStore.Api.csproj`
 - Открыть в браузере: [Swagger](http://localhost:5104/swagger) или [Сайт](http://localhost:5104)
-- **API находится вне контейнера**
-- **Postgres слушает localhost:5432**
 
 ## Сидинг БД по умолчанию
 
